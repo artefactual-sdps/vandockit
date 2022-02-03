@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with VanDocs-AM-Packager.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+import time
 from pathlib import Path
 
-import logging
-import xml.etree.ElementTree as ET
+# Local modules
+from vandocs_parser.vandocs_xml_parser import VanDocsDocumentXmlParser
 
 # Use the built-in version of scandir for Python 3.5+ otherwise use the scandir
 # module version
@@ -38,17 +40,43 @@ class PackageValidatorFactory:
 
 class PackageValidator:
     required_files = []
+    timer = {"validation": {"start": None, "end": None}}
+
+    def __init__(self, type, path, parent=None):
+        self.failed = self.checked = 0
+        self.type = type
+        self.path = Path(path)
+        self.parent = parent
+
+    def get_name(self):
+        return self.path.name
 
     def context_prefix(self):
         return 'Package "{}" '.format(self.get_name())
 
-    def __init__(self, type, path):
-        self.failed = self.checked = 0
-        self.type = type
-        self.path = Path(path)
+    def is_valid(self):
+        # Return None if no validation checks have been done
+        if self.checked > 0:
+            return 0 == self.failed
 
-    def get_name(self):
-        return self.path.name
+    def has_errors(self):
+        return self.failed > 0
+
+    def start_timer(self, timer_name):
+        self.timer[timer_name]["start"] = time.time()
+
+    def stop_timer(self, timer_name):
+        self.timer[timer_name]["end"] = time.time()
+
+    def get_elapsed_time(self, timer_name, multi=1):
+        if (
+            self.timer[timer_name]
+            and self.timer[timer_name]["start"]
+            and self.timer[timer_name]["end"]
+        ):
+            elapsed = self.timer[timer_name]["end"] - self.timer[timer_name]["start"]
+
+            return elapsed * multi
 
     def get_contents(self):
         if not self.path.exists():
@@ -78,6 +106,29 @@ class PackageValidator:
 
         return 0 == len(missing_files)
 
+    def get_summary_msg(self):
+        if self.is_valid():
+            msg = 'VALID: all {} checks for Package "{}" passed [{:.3}s]'
+
+            return msg.format(
+                self.checked,
+                self.path.name,
+                self.get_elapsed_time("validation", 1),
+            )
+        else:
+            msg = 'INVALID: {} of {} checks for Package "{}" failed [{:.3}s]'
+
+            return msg.format(
+                self.failed,
+                self.checked,
+                self.path.name,
+                self.get_elapsed_time("validation", 1),
+            )
+
+    def log_summary_msg(self):
+        log_level = logging.INFO if self.is_valid() else logging.ERROR
+        logging.log(level=log_level, msg=self.get_summary_msg())
+
 
 class VanDocsValidator(PackageValidator):
     required_files = ["manifest.txt", "Location.xml"]
@@ -93,18 +144,22 @@ class VanDocsValidator(PackageValidator):
         return containers
 
     def validate(self):
+        self.start_timer("validation")
         self.has_required_files()
         self.has_empty_transfer_log()
         self.has_a_container()
 
         # Validate containers
         for name in self.get_containers():
-            validator = VanDocsContainerValidator(self, self.path / name)
+            validator = VanDocsContainerValidator(self.type, self.path / name, self)
             validator.validate()
 
             # Add checked and failed stats from container validator
             self.failed += validator.failed
             self.checked += validator.checked
+
+        self.stop_timer("validation")
+        self.log_summary_msg()
 
         return 0 == self.failed
 
@@ -152,13 +207,8 @@ class VanDocsValidator(PackageValidator):
 class VanDocsContainerValidator(PackageValidator):
     required_files = ["ContainerMetadata.xml"]
 
-    def __init__(self, package, path):
-        PackageValidator.__init__(self, package.type, path)
-
-        self.package = package
-
     def context_prefix(self):
-        return 'Container "{}/{}" '.format(self.package.get_name(), self.get_name())
+        return 'Container "{}/{}" '.format(self.parent.get_name(), self.get_name())
 
     def validate(self):
         self.has_required_files()
@@ -272,19 +322,20 @@ class VanDocsContainerValidator(PackageValidator):
         failed = False
 
         for md_filename in metadata_filenames:
-            xmltree = self.parse_doc_metadata_xml(md_filename)
+            hash = None
+            parser = VanDocsDocumentXmlParser(self.path / md_filename)
 
-            if xmltree:
-                hash = self.get_xml_md5_hash(xmltree)
-
-            if not (xmltree and hash):
-                self.failed += 1
-                failed = True
-
+            try:
+                hash = parser.get_md5_hash()
+            except RuntimeError:
                 logging.error(
                     self.context_prefix() + 'Couldn\'t read md5 hash from "%s"',
                     md_filename,
                 )
+
+            if not hash:
+                self.failed += 1
+                failed = True
 
         if not failed:
             logging.info(
@@ -305,20 +356,3 @@ class VanDocsContainerValidator(PackageValidator):
             filename = filename[:-13]
 
         return filename
-
-    def parse_doc_metadata_xml(self, filename):
-        try:
-            with open(self.path / filename) as file:
-                xmltree = ET.parse(file)
-        except (ET.ParseError, UnicodeDecodeError):
-            return None
-
-        return xmltree.getroot()
-
-    def get_xml_md5_hash(self, xmltree):
-        nodes = xmltree.findall("./Document/MD5")
-
-        if 0 == len(nodes):
-            return None
-
-        return nodes[0].text

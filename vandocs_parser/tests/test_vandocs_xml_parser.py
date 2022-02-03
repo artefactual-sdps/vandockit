@@ -1,0 +1,141 @@
+# This file is part of VanDocs-AM-Packager.
+#
+# Copyright 2022 Artefactual Systems Inc. <http://artefactual.com>
+#
+# VanDocs-AM-Packager is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# VanDocs-AM-Packager is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with VanDocs-AM-Packager.  If not, see <http://www.gnu.org/licenses/>.
+
+import pytest
+
+# Local modules
+from vandocs_parser.vandocs_xml_parser import (
+    VanDocsXmlParser,
+    VanDocsContainerXmlParser,
+    VanDocsDocumentXmlParser,
+)
+
+CONTAINER_MD_XML = """
+<ContainerMetadata>
+    <Container>
+        <Creator>Smith Family</Creator>
+        <DateCreated>2022-02-15T12:00:00-08:00</DateCreated>
+        <Department>Testing Department</Department>
+        <RecordNumber>01-2700-10/0000007</RecordNumber>
+        <RecordType>Series</RecordType>
+        <TitleFreeTextPart>So many photos!</TitleFreeTextPart>
+        <TitleStructuredPart>Family photos 2021</TitleStructuredPart>
+    </Container>
+</ContainerMetadata>
+"""
+
+DOCUMENT_MD_XML = """
+<ContainerDocumentMetadata>
+    <Document>
+        <Creator>Smith, Jane</Creator>
+        <DateCreated>2021-11-15T08:12:34-08:00</DateCreated>
+        <Home>01-2700-10/0000007</Home>
+        <InternetMediaType>jpeg</InternetMediaType>
+        <RecordNumber>DOC/2009/040165</RecordNumber>
+        <RecordType>Image</RecordType>
+        <Title>Baby Smith, one day old</Title>
+        <MD5>4d118b7297d8469c2833046fa48471cf</MD5>
+    </Document>
+</ContainerDocumentMetadata>"""
+
+
+@pytest.fixture
+def container_md_file(tmp_path):
+    file = tmp_path / "ContainerMetadata.xml"
+    file.write_text(CONTAINER_MD_XML)
+
+    return file
+
+
+@pytest.fixture
+def document_md_file(tmp_path):
+    file = tmp_path / "DOC_2009_040165_Metadata.xml"
+    file.write_text(DOCUMENT_MD_XML)
+
+    return file
+
+
+class TestVanDocsXmlParser:
+    def test_get_xml_root(self, container_md_file):
+        parser = VanDocsXmlParser(container_md_file)
+        xml_root = parser.get_xml_root()
+
+        assert "ContainerMetadata" == xml_root.tag
+
+    def test_fail_get_xml_root(self, tmp_path):
+        empty_file = tmp_path / "empty.xml"
+        empty_file.touch()
+
+        parser = VanDocsXmlParser(empty_file)
+
+        with pytest.raises(RuntimeError) as excinfo:
+            parser.get_xml_root()
+
+            assert "Couldn't parse XML tree" in str(excinfo.value)
+
+
+class TestVanDocsContainerXmlParser:
+    def test_get_value(self, container_md_file):
+        parser = VanDocsContainerXmlParser(container_md_file)
+
+        assert "Smith Family" == parser.get_value("Creator")
+
+    def test_get_value_not_found(self, container_md_file):
+        parser = VanDocsContainerXmlParser(container_md_file)
+
+        with pytest.raises(RuntimeError) as excinfo:
+            parser.get_value("foo")
+
+            assert 'XML element "foo" not found' in str(excinfo.value)
+
+    def test_get_dcmi_data(self, container_md_file):
+        parser = VanDocsContainerXmlParser(container_md_file)
+
+        assert {
+            "creator": "Smith Family",
+            "date": "2022-02-15T12:00:00-08:00",
+            "description": "So many photos!",
+            "identifier": "01-2700-10/0000007",
+            "provenance": "Testing Department",
+            "title": "Family photos 2021",
+            "type": "Series",
+        } == parser.get_dcmi_data()
+
+
+class TestVanDocsDocumentXmlParser:
+    def test_get_value(self, document_md_file):
+        parser = VanDocsDocumentXmlParser(document_md_file)
+
+        assert "Smith, Jane" == parser.get_value("Creator")
+
+    def test_get_dcmi_data(self, document_md_file):
+        parser = VanDocsDocumentXmlParser(document_md_file)
+
+        assert {
+            "creator": "Smith, Jane",
+            "date": "2021-11-15T08:12:34-08:00",
+            "format": "jpeg",
+            "identifier": "DOC/2009/040165",
+            "source": "01-2700-10/0000007",
+            "title": "Baby Smith, one day old",
+            "type": "Image",
+        } == parser.get_dcmi_data()
+
+    def test_get_md5_hash(self, document_md_file):
+        parser = VanDocsDocumentXmlParser(document_md_file)
+
+        assert "4d118b7297d8469c2833046fa48471cf" == parser.get_md5_hash()

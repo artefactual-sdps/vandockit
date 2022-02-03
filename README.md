@@ -2,15 +2,33 @@
 
 Copyright 2022 Artefactual Systems Inc. <http://artefactual.com>
 
-Python command line scripts to read and validate a VanDocs transfer directory,
-and output an Archivematica compliant SIP.
+Python command line scripts to validate a VanDocs transfer package and convert
+it to multiple Archivematica standard transfer packages (one per VanDocs
+container).
 
-## Validator
-
-`validate_package.py` is a CLI entry point for validating that a directory meets
-the expected VanDocs transfer directory and file structure. To validate a
-VanDocs transfer, run:
+## Validate package
 
 ```
-./validate_package.py vandocs path/to/package/
+validate_package.py PATH
 ```
+
+`validate_package.py` validates that the VanDocs transfer package at PATH meets
+the expected directory and file structure.
+
+Validation errors are echoed to STDOUT and the script exits with error code 1.
+All validation check outcomes (pass or fail) are logged to `logs/`.
+
+## Convert package
+
+```
+convert_package.py SOURCE_PATH TARGET_PATH
+```
+
+`convert_package.py` validates the VanDocs transfer package at SOURCE_PATH then,
+if valid, converts the package to multiple Archivematica standard transfer
+packages in TARGET_PATH. One Archivematica transfer is created, as a
+sub-directory of TARGET_PATH, for each container in the VanDocs transfer.
+
+Validation and conversion errors are echoed to STDOUT and the script exits with
+error code 1. All validation check and conversion step outcomes (pass or fail)
+are logged to `logs/`.
