@@ -1,5 +1,7 @@
 # VanDocs-AM-packager
 
+Copyright 2022 Artefactual Systems Inc. <http://artefactual.com>
+
 Python command line scripts to read and validate a VanDocs transfer directory,
 and output an Archivematica compliant SIP.
 
