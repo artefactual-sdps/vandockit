@@ -130,6 +130,29 @@ class PackageValidator:
         log_level = logging.INFO if self.is_valid() else logging.ERROR
         logging.log(level=log_level, msg=self.get_summary_msg())
 
+    def get_summary_msg(self):
+        if self.is_valid():
+            msg = 'VALID: all {} checks for Package "{}" passed [{:.3}s]'
+
+            return msg.format(
+                self.checked,
+                self.path.name,
+                self.get_elapsed_time("validation", 1),
+            )
+        else:
+            msg = 'INVALID: {} of {} checks for Package "{}" failed [{:.3}s]'
+
+            return msg.format(
+                self.failed,
+                self.checked,
+                self.path.name,
+                self.get_elapsed_time("validation", 1),
+            )
+
+    def log_summary_msg(self):
+        log_level = logging.INFO if self.is_valid() else logging.ERROR
+        logging.log(level=log_level, msg=self.get_summary_msg())
+
 
 class VanDocsValidator(PackageValidator):
     required_files = [

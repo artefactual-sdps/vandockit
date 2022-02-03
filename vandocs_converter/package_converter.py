@@ -120,9 +120,6 @@ class PackageConverter:
 class VanDocsPackageConverter(PackageConverter):
     SUBMISSION_DOC_FILENAMES = [
         "Location.xml",
-        "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
-        "VanDocsDispositionContainerMetadataSchema.xsd",
-        "VanDocsDispositionLocationMetadataSchema.xsd",
     ]
 
     def __init__(self, path, parent=None):
@@ -369,12 +366,7 @@ class VanDocsContainerConverter(PackageConverter):
 
         self.copy_submission_docs(am_transfer_dir)
         self.write_am_checksum_file(am_transfer_dir)
-
-        # 2022-03-10: Glenn requested we don't create a metadata.csv for now
-        # because the mappings from VanDocs to Dublin Core are not correct
-        #
-        # self.write_am_metadata(am_transfer_dir)
-
+        self.write_am_metadata(am_transfer_dir)
         self.copy_preservation_objects(am_transfer_dir)
         self.copy_desc_md_files(am_transfer_dir)
         self.make_read_only(am_transfer_dir)
