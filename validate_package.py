@@ -18,56 +18,81 @@
 # along with VanDocs-AM-Packager.  If not, see <http://www.gnu.org/licenses/>.
 
 import click
-from datetime import datetime
 import logging
 import logging.config
-import os
+from pathlib import Path
+from datetime import datetime
 
-# Local modules
-import validators.package_validators as validators
+# Local imports
+from validators.package_validators import PackageValidatorFactory
 
 
 def config_logging():
-    logdir = "logs/"
+    logdir = Path("logs/")
 
-    if not os.path.exists(logdir):
-        os.mkdir(logdir, mode=0o755)
+    if not logdir.exists():
+        logdir.mkdir(0o755)
 
     logging.addLevelName(logging.INFO, "PASS")
     logging.addLevelName(logging.ERROR, "FAIL")
 
-    logging.config.fileConfig(
-        os.path.join("conf", "logging.conf"),
-        defaults={
-            "logname": os.path.join(
-                "logs",
-                "validate_package_{}.log".format(
-                    datetime.now().strftime("%Y%m%d_%H%M%S")
-                ),
-            )
-        },
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = 0
+
+    console_logger = logging.StreamHandler()
+    console_logger.setLevel(logging.ERROR)
+    console_logger.setFormatter(formatter)
+    logger.addHandler(console_logger)
+
+    log_filename = "validate_package_{}.log".format(
+        datetime.now().strftime("%Y%m%d_%H%M%S")
     )
+    log_path = logdir / log_filename
+
+    file_logger = logging.FileHandler(log_path)
+    file_logger.setLevel(logging.INFO)
+    file_logger.setFormatter(formatter)
+    logger.addHandler(file_logger)
 
 
 @click.command()
-@click.argument("type")
 @click.argument("path", type=click.Path(exists=True))
-def main(type, path):
+def main(path):
     """
-    validate_package is a command line tool for validating the given directory
-    matches the expected package structure
+    Validate that the given directory matches the expected package structure
 
     To run:
-    validate_package.py PACKAGE_TYPE PATH
+    validate_package.py PATH
 
-    PACKAGE_TYPE only supports the "vandocs" type right now.
-
-    PATH is the path of the directory to be validated.
+    Where PATH is the filesystem path to the directory to validate
     """
     config_logging()
-    validator = validators.PackageValidatorFactory.get_validator(type, path)
+    validator = PackageValidatorFactory.get_validator("VanDocs", path)
 
-    validator.validate()
+    valid = validator.validate()
+
+    if valid:
+        click.echo(
+            click.style(
+                '\nSUCCESS: All {} validation checks for Package "{}" passed!'.format(
+                    validator.checked, path
+                ),
+                fg="green",
+            )
+        )
+
+    else:
+        click.echo(
+            click.style(
+                '\nFAILURE: {} of {} validation checks for Package "{}" failed.'.format(
+                    validator.failed, validator.checked, path
+                ),
+                fg="red",
+            )
+        )
 
 
 if __name__ == "__main__":

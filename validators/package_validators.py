@@ -42,9 +42,9 @@ class PackageValidator:
     def context_prefix(self):
         return 'Package "{}" '.format(self.get_name())
 
-    def __init__(self, package_type, path):
-        self.failed = False
-        self.package_type = package_type
+    def __init__(self, type, path):
+        self.failed = self.checked = 0
+        self.type = type
         self.path = Path(path)
 
     def get_name(self):
@@ -60,6 +60,7 @@ class PackageValidator:
         return self.path.iterdir()
 
     def has_required_files(self):
+        self.checked += 1
         missing_files = []
 
         for filename in self.required_files:
@@ -69,6 +70,7 @@ class PackageValidator:
         if 0 == len(missing_files):
             logging.info(self.context_prefix() + "has all required metadata files")
         else:
+            self.failed += 1
             logging.error(
                 self.context_prefix() + "missing required metadata file(s) (%s)",
                 ", ".join(missing_files),
@@ -98,23 +100,26 @@ class VanDocsValidator(PackageValidator):
         # Validate containers
         for name in self.get_containers():
             validator = VanDocsContainerValidator(self, self.path / name)
+            validator.validate()
 
-            if not validator.validate():
-                self.failed = True
+            # Add checked and failed stats from container validator
+            self.failed += validator.failed
+            self.checked += validator.checked
 
-        return not self.failed
+        return 0 == self.failed
 
     def has_empty_transfer_log(self):
+        self.checked += 1
         logpath = self.path / "TransferLog.txt"
 
         if not logpath.exists():
-            self.failed = True
+            self.failed += 1
             logging.error(self.context_prefix() + "TransferLog.txt is missing")
 
             return False
 
         if logpath.stat().st_size > 0:
-            self.failed = True
+            self.failed += 1
             logging.error(
                 self.context_prefix()
                 + "TransferLog.txt is present but not empty (%sB)",
@@ -131,13 +136,14 @@ class VanDocsValidator(PackageValidator):
         return True
 
     def has_a_container(self):
+        self.checked += 1
         passed = False
 
         if len(self.get_containers()) > 0:
             passed = True
             logging.info(self.context_prefix() + "has one or more containers")
         else:
-            self.failed = True
+            self.failed += 1
             logging.error(self.context_prefix() + "has no containers")
 
         return passed
@@ -147,9 +153,9 @@ class VanDocsContainerValidator(PackageValidator):
     required_files = ["ContainerMetadata.xml"]
 
     def __init__(self, package, path):
-        self.failed = False
+        PackageValidator.__init__(self, package.type, path)
+
         self.package = package
-        self.path = path
 
     def context_prefix(self):
         return 'Container "{}/{}" '.format(self.package.get_name(), self.get_name())
@@ -169,7 +175,7 @@ class VanDocsContainerValidator(PackageValidator):
         self.has_one_object_per_metadata_file(object_filenames, metadata_filenames)
         self.has_checksum_metadata(metadata_filenames)
 
-        return not self.failed
+        return 0 == self.failed
 
     def split_object_and_metadata_filenames(self):
         object_filenames = []
@@ -188,19 +194,30 @@ class VanDocsContainerValidator(PackageValidator):
         return object_filenames, metadata_filenames
 
     def has_objects(self, object_filenames):
+        self.checked += 1
+
         if 0 == len(object_filenames):
+            self.failed += 1
             logging.error(self.context_prefix() + "no objects in container")
 
-        return len(object_filenames) > 0
+            return False
+
+        logging.info(
+            self.context_prefix() + "has {} objects".format(len(object_filenames))
+        )
+
+        return True
 
     def has_one_metadata_file_per_object(self, object_filenames, metadata_filenames):
+        self.checked += 1
         failed = False
 
         for filename in object_filenames:
             md_filename = self.get_filename_stem(filename) + "_Metadata.xml"
 
             if md_filename not in metadata_filenames:
-                self.failed = failed = True
+                self.failed += 1
+                failed = True
 
                 logging.error(
                     self.context_prefix()
@@ -218,7 +235,9 @@ class VanDocsContainerValidator(PackageValidator):
         return not failed
 
     def has_one_object_per_metadata_file(self, object_filenames, metadata_filenames):
+        self.checked += 1
         failed = False
+
         for md_filename in metadata_filenames:
             found = False
 
@@ -231,7 +250,8 @@ class VanDocsContainerValidator(PackageValidator):
                     break
 
             if not found:
-                self.failed = failed = True
+                self.failed += 1
+                failed = True
 
                 logging.error(
                     self.context_prefix()
@@ -248,6 +268,7 @@ class VanDocsContainerValidator(PackageValidator):
         return not failed
 
     def has_checksum_metadata(self, metadata_filenames):
+        self.checked += 1
         failed = False
 
         for md_filename in metadata_filenames:
@@ -257,7 +278,9 @@ class VanDocsContainerValidator(PackageValidator):
                 hash = self.get_xml_md5_hash(xmltree)
 
             if not (xmltree and hash):
-                self.failed = failed = True
+                self.failed += 1
+                failed = True
+
                 logging.error(
                     self.context_prefix() + 'Couldn\'t read md5 hash from "%s"',
                     md_filename,
