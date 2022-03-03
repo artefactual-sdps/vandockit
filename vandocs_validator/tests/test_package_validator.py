@@ -229,7 +229,7 @@ class TestVanDocsValidator:
         vandocs_validator.validate()
 
         assert (
-            'VALID: all 8 checks for Package "Package_001" passed [0.0s]'
+            'VALID: all 12 checks for Package "Package_001" passed [0.0s]'
             == vandocs_validator.get_summary_msg()
         )
 
@@ -239,7 +239,7 @@ class TestVanDocsValidator:
         validator.validate()
 
         assert (
-            'INVALID: 1 of 3 checks for Package "Package_001" failed [0.0s]'
+            'INVALID: 1 of 7 checks for Package "Package_001" failed [0.0s]'
             == validator.get_summary_msg()
         )
 

@@ -88,23 +88,24 @@ class PackageValidator:
         return self.path.iterdir()
 
     def has_required_files(self):
-        self.checked += 1
-        missing_files = []
+        failed = False
 
         for filename in self.required_files:
+            self.checked += 1
+
             if filename not in [x.name for x in self.get_contents()]:
-                missing_files.append(filename)
+                self.failed += 1
+                failed = True
 
-        if 0 == len(missing_files):
-            logging.info(self.context_prefix() + "has all required metadata files")
-        else:
-            self.failed += 1
-            logging.error(
-                self.context_prefix() + "missing required metadata file(s) (%s)",
-                ", ".join(missing_files),
-            )
+                logging.error(
+                    self.context_prefix() + 'is missing required file "%s"',
+                    filename,
+                )
 
-        return 0 == len(missing_files)
+        if not failed:
+            logging.info(self.context_prefix() + "has all required files")
+
+        return not failed
 
     def get_summary_msg(self):
         if self.is_valid():
@@ -131,7 +132,13 @@ class PackageValidator:
 
 
 class VanDocsValidator(PackageValidator):
-    required_files = ["manifest.txt", "Location.xml"]
+    required_files = [
+        "manifest.txt",
+        "Location.xml",
+        "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
+        "VanDocsDispositionContainerMetadataSchema.xsd",
+        "VanDocsDispositionLocationMetadataSchema.xsd",
+    ]
 
     def get_containers(self):
         containers = []
