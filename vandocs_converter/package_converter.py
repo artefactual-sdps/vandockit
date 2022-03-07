@@ -102,6 +102,20 @@ class PackageConverter:
 
         return path
 
+    def make_read_only(self, target_dir):
+        """Recursively remove write access from directories and files in
+        directory dir to prevent modification"""
+
+        for item in target_dir.iterdir():
+            if item.is_dir():
+                # Recurse into sub-directories
+                self.make_read_only(item)
+            else:
+                item.chmod(0o444)
+
+        # Make target_dir itself read-only
+        target_dir.chmod(0o555)
+
 
 class VanDocsPackageConverter(PackageConverter):
     SUBMISSION_DOC_FILENAMES = [
@@ -355,3 +369,4 @@ class VanDocsContainerConverter(PackageConverter):
         self.write_am_metadata(am_transfer_dir)
         self.copy_preservation_objects(am_transfer_dir)
         self.copy_desc_md_files(am_transfer_dir)
+        self.make_read_only(am_transfer_dir)

@@ -218,6 +218,24 @@ class TestPackageConverter:
         assert dir1.exists() and dir1.is_dir()
         assert dir2.exists() and dir2.is_dir()
 
+    def test_make_read_only(self, tmp_path, dest_dir):
+        test_dir = dest_dir / "test_dir"
+        test_dir.mkdir()
+        test_file = test_dir / "test_file.txt"
+        test_file.touch()
+
+        converter = PackageConverter(tmp_path)
+        converter.make_read_only(test_dir)
+
+        # Can't add a new file
+        new_file = test_dir / "spam.txt"
+        with pytest.raises(PermissionError):
+            new_file.touch()
+
+        # Can't write to an existing file
+        with pytest.raises(PermissionError):
+            test_file.write_text("foo")
+
 
 class TestVanDocsPackageConverter:
     def test_get_submission_docs(self, vd_package_converter):
