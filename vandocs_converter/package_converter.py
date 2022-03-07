@@ -90,6 +90,18 @@ class PackageConverter:
 
         return self.get_files_by_type(self.FT_SUBMISSION_DOC)
 
+    def create_subdirs(self, path, subdirs):
+        """Recursively create nested subdirectories in path, if the subdir
+        doesn't exist already, then return the full path to final subdir"""
+
+        for subdir in subdirs.split("/"):
+            path = path / subdir
+
+            if not path.exists():
+                path.mkdir()
+
+        return path
+
 
 class VanDocsPackageConverter(PackageConverter):
     SUBMISSION_DOC_FILENAMES = [
@@ -102,14 +114,6 @@ class VanDocsPackageConverter(PackageConverter):
         # VanDocs containers are sub-directories that group together a number of
         # related preservation objects and their metadata
         self.containers = []
-
-    def create_dest_dir(self, dest_name):
-        dest_dir = Path(dest_name)
-
-        if not dest_dir.exists():
-            dest_dir.mkdir()
-
-        return dest_dir
 
     def get_transfer_number(self):
         # e.g "VanDocs-123456" -> "123456"
@@ -149,7 +153,7 @@ class VanDocsPackageConverter(PackageConverter):
 
         for container in self.get_containers():
             converter = VanDocsContainerConverter(container, self)
-            converter.write_am_std_transfer(self.create_dest_dir(dest_path))
+            converter.write_am_std_transfer(self.create_subdirs(Path(), dest_path))
             self.errors += converter.errors
 
         self.timer["end"] = time.time()
@@ -194,24 +198,14 @@ class VanDocsContainerConverter(PackageConverter):
 
         return am_transfer_dir
 
-    def create_metadata_dir(self, am_transfer_dir):
-        md_dir = am_transfer_dir / "metadata"
-
-        if not md_dir.exists():
-            md_dir.mkdir()
-
-        return md_dir
-
     def copy_submission_docs(self, am_transfer_dir):
         """Copy relevant VanDocs processing files to submissionDocumentation
         directory"""
 
         # Create metadata/submissionDocumentation dir
-        md_dir = self.create_metadata_dir(am_transfer_dir)
-        subdoc_dir = md_dir / "submissionDocumentation"
-
-        if not subdoc_dir.exists():
-            subdoc_dir.mkdir()
+        subdoc_dir = self.create_subdirs(
+            am_transfer_dir, "metadata/submissionDocumentation"
+        )
 
         docs = self.parent.get_submission_docs() + self.get_submission_docs()
 
@@ -259,7 +253,7 @@ class VanDocsContainerConverter(PackageConverter):
     def write_am_checksum_file(self, am_transfer_dir):
         """Write an Archivematica checksum.md5 file to the metadata/ directory"""
 
-        md_dir = self.create_metadata_dir(am_transfer_dir)
+        md_dir = self.create_subdirs(am_transfer_dir, "metadata")
         checksum_file = md_dir / "checksum.md5"
 
         logging.info(
@@ -284,7 +278,7 @@ class VanDocsContainerConverter(PackageConverter):
     def create_metadata_csv_file(self, am_transfer_dir):
         """Create an Archivematica metadata.csv file for descriptive metadata"""
 
-        md_dir = self.create_metadata_dir(am_transfer_dir)
+        md_dir = self.create_subdirs(am_transfer_dir, "metadata")
         metadata_file = md_dir / "metadata.csv"
 
         return metadata_file
@@ -308,16 +302,8 @@ class VanDocsContainerConverter(PackageConverter):
 
         csv_writer.write_csv_file(csv_file)
 
-    def make_container_dir(self, am_transfer_dir):
-        container_dir = am_transfer_dir / self.name
-
-        if not container_dir.exists():
-            container_dir.mkdir()
-
-        return container_dir
-
     def copy_preservation_objects(self, am_transfer_dir):
-        container_dir = self.make_container_dir(am_transfer_dir)
+        container_dir = self.create_subdirs(am_transfer_dir, self.name)
         objects = self.get_preservation_objects()
 
         logging.info(

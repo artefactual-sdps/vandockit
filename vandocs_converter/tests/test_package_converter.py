@@ -202,6 +202,22 @@ class TestPackageConverter:
         with pytest.raises(KeyError):
             converter.add_file("spam", file)
 
+    def test_create_subdirs(self, tmp_path, dest_dir):
+        converter = PackageConverter(tmp_path)
+        converter.create_subdirs(dest_dir, "spam")
+        test_dir = dest_dir / "spam"
+
+        assert test_dir.exists() and test_dir.is_dir()
+
+    def test_create_two_subdirs(self, tmp_path, dest_dir):
+        converter = PackageConverter(tmp_path)
+        converter.create_subdirs(dest_dir, "spam/eggs")
+        dir1 = dest_dir / "spam"
+        dir2 = dir1 / "eggs"
+
+        assert dir1.exists() and dir1.is_dir()
+        assert dir2.exists() and dir2.is_dir()
+
 
 class TestVanDocsPackageConverter:
     def test_get_submission_docs(self, vd_package_converter):
@@ -220,12 +236,6 @@ class TestVanDocsPackageConverter:
         # Because Python assigns objects by reference, we have to remove the
         # dummy file from the file list to prevent errors in subsequent tests
         vd_package_converter.SUBMISSION_DOC_FILENAMES.pop()
-
-    def test_create_dest_dir(self, tmp_path, vd_package_converter):
-        dest_dir = tmp_path / "foo"
-        vd_package_converter.create_dest_dir(dest_dir)
-
-        assert dest_dir.exists() and dest_dir.is_dir()
 
     def test_get_transfer_number(self, vd_package_converter):
         assert TRANSFER_ID == vd_package_converter.get_transfer_number()
@@ -276,12 +286,6 @@ class TestVanDocsContainerConverter:
         check_path.mkdir()
 
         assert None == vd_container_converter.create_am_transfer_dir(dest_dir)
-
-    def test_create_metadata_dir(self, dest_dir, vd_container_converter):
-        vd_container_converter.create_metadata_dir(dest_dir)
-        md_dir = dest_dir / "metadata"
-
-        assert md_dir.exists() and md_dir.is_dir()
 
     def test_copy_submission_docs(self, dest_dir, vd_container_converter):
         subdocs_dir = dest_dir / "metadata" / "submissionDocumentation"
@@ -439,12 +443,6 @@ class TestVanDocsContainerConverter:
         # Don't check the last row of csv_contents because it's a near duplicate
         # of the previous row
         assert check_csv_contents == csv_contents[:3]
-
-    def test_make_container_dir(self, dest_dir, vd_container_converter):
-        vd_container_converter.make_container_dir(dest_dir)
-        check_path = dest_dir / CONTAINERS[0]
-
-        assert check_path.exists() and check_path.is_dir()
 
     def test_copy_preservation_objects(self, dest_dir, vd_container_converter):
         vd_container_converter.copy_preservation_objects(dest_dir)
