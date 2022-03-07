@@ -449,6 +449,19 @@ class TestVanDocsContainerConverter:
 
         object_dir = dest_dir / vd_container_converter.name
 
-        assert not set(DOCUMENTS) ^ set(x.name for x in object_dir.iterdir())
+        assert not set(DOCUMENTS) ^ set(i.name for i in object_dir.iterdir())
+
+    def test_get_desc_md_files(self, vd_container_converter):
+        assert not set(DOC_MD_FILES) ^ set(
+            i.name for i in vd_container_converter.get_desc_md_files()
+        )
+
+    def test_copy_desc_md_files(self, dest_dir, vd_container_converter):
+        vd_container_converter.copy_desc_md_files(dest_dir)
+        sd_dir = dest_dir / "metadata" / "submissionDocumentation"
+
+        assert not set(DOC_MD_FILES) ^ set(
+            i.name for i in sd_dir.iterdir() if i.name.endswith("_Metadata.xml")
+        )
 
     # def test_write_am_std_transfer(self, dest_dir, vd_container_converter):

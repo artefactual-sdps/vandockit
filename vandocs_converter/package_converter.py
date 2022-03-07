@@ -315,6 +315,34 @@ class VanDocsContainerConverter(PackageConverter):
 
         self.copy_files(objects, container_dir)
 
+    def get_desc_md_files(self):
+        """Get a list of descriptive metadata file names in the source container"""
+
+        if not self.get_files_by_type(self.FT_DESC_METADATA):
+            self.files[self.FT_DESC_METADATA] = [
+                i for i in self.path.iterdir() if i.name.endswith("_Metadata.xml")
+            ]
+
+        return self.get_files_by_type(self.FT_DESC_METADATA)
+
+    def copy_desc_md_files(self, am_transfer_dir):
+        """Copy the descriptive metadata files from source container to the target
+        am_transfer_dir"""
+
+        dmd_files = self.get_desc_md_files()
+        subdoc_dir = self.create_subdirs(
+            am_transfer_dir, "metadata/submissionDocumentation"
+        )
+
+        logging.info(
+            self.get_log_prefix()
+            + 'Copying {} document metadata files to "{}"'.format(
+                len(dmd_files), subdoc_dir
+            )
+        )
+
+        self.copy_files(dmd_files, subdoc_dir)
+
     def write_am_std_transfer(self, dest_path):
         am_transfer_dir = self.create_am_transfer_dir(dest_path)
 
@@ -326,3 +354,4 @@ class VanDocsContainerConverter(PackageConverter):
         self.write_am_checksum_file(am_transfer_dir)
         self.write_am_metadata(am_transfer_dir)
         self.copy_preservation_objects(am_transfer_dir)
+        self.copy_desc_md_files(am_transfer_dir)
