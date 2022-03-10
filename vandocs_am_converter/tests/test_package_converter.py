@@ -19,7 +19,7 @@ import csv
 import pytest
 
 # Local modules
-from vandocs_converter.package_converter import (
+from vandocs_am_converter.package_converter import (
     PackageConverter,
     VanDocsPackageConverter,
     VanDocsContainerConverter,

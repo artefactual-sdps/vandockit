@@ -24,8 +24,8 @@ from datetime import datetime
 from pathlib import Path
 
 # Local modules
-from vandocs_converter.package_converter import VanDocsPackageConverter
-from vandocs_validator.package_validator import PackageValidatorFactory
+from vandocs_am_converter.package_converter import VanDocsPackageConverter
+from vandocs_am_converter.package_validator import PackageValidatorFactory
 
 # Constants
 SRC_PACKAGE_TYPE = "VanDocs"

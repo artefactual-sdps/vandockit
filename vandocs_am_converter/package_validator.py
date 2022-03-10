@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandocs_parser.vandocs_xml_parser import VanDocsDocumentXmlParser
+from vandocs_am_converter.vandocs_xml_parser import VanDocsDocumentXmlParser
 
 # Use the built-in version of scandir for Python 3.5+ otherwise use the scandir
 # module version

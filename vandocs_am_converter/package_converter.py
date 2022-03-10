@@ -21,11 +21,11 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandocs_parser.vandocs_xml_parser import (
+from vandocs_am_converter.vandocs_xml_parser import (
     VanDocsContainerXmlParser,
     VanDocsDocumentXmlParser,
 )
-from archivematica_writer.metadata_csv_writer import AmMetadataCsvWriter
+from vandocs_am_converter.metadata_csv_writer import AmMetadataCsvWriter
 
 
 class PackageConverter:

@@ -18,7 +18,7 @@
 import pytest
 
 # Local modules
-from archivematica_writer.metadata_csv_writer import AmMetadataCsvWriter
+from vandocs_am_converter.metadata_csv_writer import AmMetadataCsvWriter
 
 
 @pytest.fixture

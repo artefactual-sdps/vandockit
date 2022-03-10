@@ -19,7 +19,7 @@ import pytest
 import time
 
 # Local modules
-import vandocs_validator.package_validator as validators
+import vandocs_am_converter.package_validator as validators
 
 PKG_MD_FILES = ["TransferLog.txt"] + validators.VanDocsValidator.required_files
 CONTAINERS = ["01-2500-10_0000007"]

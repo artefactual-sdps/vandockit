@@ -18,7 +18,7 @@
 import pytest
 
 # Local modules
-from vandocs_parser.vandocs_xml_parser import (
+from vandocs_am_converter.vandocs_xml_parser import (
     VanDocsXmlParser,
     VanDocsContainerXmlParser,
     VanDocsDocumentXmlParser,
