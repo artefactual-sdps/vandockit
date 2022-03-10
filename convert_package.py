@@ -130,11 +130,16 @@ def main(source_path, dest_path):
 
     config_logging()
 
-    # Log script arguments
+    # Log script invocation with arguments
     logging.info(" ".join(["Executing:"] + sys.argv))
 
-    validate(source_path)
-    convert(source_path, dest_path)
+    try:
+        validate(source_path)
+        convert(source_path, dest_path)
+    except Exception as exception:
+        # Log and re-raise exceptions
+        logging.critical(exception)
+        raise exception
 
 
 if __name__ == "__main__":

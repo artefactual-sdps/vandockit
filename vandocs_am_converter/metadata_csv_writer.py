@@ -18,7 +18,7 @@
 import csv
 
 
-class AmMetadataCsvWriter:
+class AMMetadataCsvWriter:
     """Write Dublin Core (DCMI) metadata to a CSV file in Archivematica
     metadata.csv format"""
 

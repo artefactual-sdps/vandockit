@@ -55,11 +55,8 @@ def vd_package_validator(test_package):
 
 @pytest.fixture
 def vd_container_validator(test_package, test_container_data):
-    vd_base_validator = vd_validators.PackageValidatorFactory.get_validator(
-        "vandocs", test_package
-    )
     validator = vd_validators.ContainerValidator(
-        "vandocs", test_package / test_container_data["name"], vd_base_validator
+        "vandocs", test_package / test_container_data["name"]
     )
 
     return validator
@@ -209,9 +206,7 @@ class TestPackageValidator:
 class TestContainerValidator:
     def test_context_prefix(self, vd_container_validator, test_container_data):
         assert (
-            'Container "{}/{}" '.format(
-                test_container_data["transfer_name"], test_container_data["name"]
-            )
+            'Container "{}" '.format(test_container_data["name"])
             == vd_container_validator.context_prefix()
         )
 
@@ -225,11 +220,9 @@ class TestContainerValidator:
             / test_container_data["md_filename"]
         )
         metadata_file.unlink()
-        vd_base_validator = vd_validators.PackageValidatorFactory.get_validator(
-            "vandocs", test_package
-        )
+
         validator = vd_validators.ContainerValidator(
-            "vandocs", test_package / test_container_data["name"], vd_base_validator
+            "vandocs", test_package / test_container_data["name"]
         )
 
         assert not validator.has_required_files()
@@ -281,9 +274,7 @@ class TestContainerValidator:
             ["DOC_2009_040165_Metadata.xml"]
         )
 
-    def test_not_has_checksum_metadata(
-        self, test_package, vd_package_validator, test_container_data
-    ):
+    def test_not_has_checksum_metadata(self, test_package, test_container_data):
         # Delete checksum data
         md_file = (
             test_package / test_container_data["name"] / "DOC_2009_016092_Metadata.xml"
@@ -291,7 +282,7 @@ class TestContainerValidator:
         md_file.write_text("")
 
         validator = vd_validators.ContainerValidator(
-            "vandocs", test_package / test_container_data["name"], vd_package_validator
+            "vandocs", test_package / test_container_data["name"]
         )
 
         assert not validator.has_checksum_metadata(["DOC_2009_016092_Metadata.xml"])

@@ -69,10 +69,19 @@ def main(path):
     Validate that the VanDocs transfer package at PATH matches the expected
     structure and contents.
     """
+
     config_logging()
 
-    validator = PackageValidatorFactory.get_validator("VanDocs", path)
-    valid = validator.validate()
+    # Log script invocation with arguments
+    logging.info(" ".join(["Executing:"] + sys.argv))
+
+    try:
+        validator = PackageValidatorFactory.get_validator("VanDocs", path)
+        valid = validator.validate()
+    except Exception as exception:
+        # Log and re-raise exceptions
+        logging.critical(exception)
+        raise exception
 
     print_validation_summary(validator)
 

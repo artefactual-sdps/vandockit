@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.metadata_xml_parser import VanDocsDocumentXmlParser
+from vandocs_am_converter.metadata_xml_parser import DocumentXmlParser
 
 # Use the built-in version of scandir for Python 3.5+ otherwise use the scandir
 # module version
@@ -42,11 +42,10 @@ class BaseValidator:
     required_files = []
     timer = {"validation": {"start": None, "end": None}}
 
-    def __init__(self, type, path, parent=None):
+    def __init__(self, type, path):
         self.failed = self.checked = 0
         self.type = type
         self.path = Path(path)
-        self.parent = parent
 
     def get_name(self):
         return self.path.name
@@ -175,7 +174,7 @@ class PackageValidator(BaseValidator):
 
         # Validate containers
         for name in self.get_containers():
-            validator = ContainerValidator(self.type, self.path / name, self)
+            validator = ContainerValidator(self.type, self.path / name)
             validator.validate()
 
             # Add checked and failed stats from container validator
@@ -230,7 +229,7 @@ class ContainerValidator(BaseValidator):
     required_files = ["ContainerMetadata.xml"]
 
     def context_prefix(self):
-        return 'Container "{}/{}" '.format(self.parent.get_name(), self.get_name())
+        return 'Container "{}" '.format(self.get_name())
 
     def validate(self):
         self.has_required_files()
@@ -345,7 +344,7 @@ class ContainerValidator(BaseValidator):
 
         for md_filename in metadata_filenames:
             hash = None
-            parser = VanDocsDocumentXmlParser(self.path / md_filename)
+            parser = DocumentXmlParser(self.path / md_filename)
 
             try:
                 hash = parser.get_md5_hash()

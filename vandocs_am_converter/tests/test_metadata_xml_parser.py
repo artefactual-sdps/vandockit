@@ -19,9 +19,9 @@ import pytest
 
 # Local modules
 from vandocs_am_converter.metadata_xml_parser import (
-    VanDocsXmlParser,
-    VanDocsContainerXmlParser,
-    VanDocsDocumentXmlParser,
+    BaseXmlParser,
+    ContainerXmlParser,
+    DocumentXmlParser,
 )
 
 
@@ -41,9 +41,9 @@ def document_md_file(tmp_path, test_document_md_xml):
     return file
 
 
-class TestVanDocsXmlParser:
+class TestBaseXmlParser:
     def test_get_xml_root(self, container_md_file):
-        parser = VanDocsXmlParser(container_md_file)
+        parser = BaseXmlParser(container_md_file)
         xml_root = parser.get_xml_root()
 
         assert "ContainerMetadata" == xml_root.tag
@@ -52,7 +52,7 @@ class TestVanDocsXmlParser:
         empty_file = tmp_path / "empty.xml"
         empty_file.touch()
 
-        parser = VanDocsXmlParser(empty_file)
+        parser = BaseXmlParser(empty_file)
 
         with pytest.raises(RuntimeError) as excinfo:
             parser.get_xml_root()
@@ -60,14 +60,14 @@ class TestVanDocsXmlParser:
             assert "Couldn't parse XML tree" in str(excinfo.value)
 
 
-class TestVanDocsContainerXmlParser:
+class TestContainerXmlParser:
     def test_get_value(self, container_md_file):
-        parser = VanDocsContainerXmlParser(container_md_file)
+        parser = ContainerXmlParser(container_md_file)
 
         assert "Smith Family" == parser.get_value("Creator")
 
     def test_get_value_not_found(self, container_md_file):
-        parser = VanDocsContainerXmlParser(container_md_file)
+        parser = ContainerXmlParser(container_md_file)
 
         with pytest.raises(RuntimeError) as excinfo:
             parser.get_value("foo")
@@ -75,23 +75,23 @@ class TestVanDocsContainerXmlParser:
             assert 'XML element "foo" not found' in str(excinfo.value)
 
     def test_get_dcmi_data(self, container_md_file, test_container_data):
-        parser = VanDocsContainerXmlParser(container_md_file)
+        parser = ContainerXmlParser(container_md_file)
 
         assert test_container_data["metadata"] == parser.get_dcmi_data()
 
 
-class TestVanDocsDocumentXmlParser:
+class TestDocumentXmlParser:
     def test_get_value(self, document_md_file):
-        parser = VanDocsDocumentXmlParser(document_md_file)
+        parser = DocumentXmlParser(document_md_file)
 
         assert "Smith, Jane" == parser.get_value("Creator")
 
     def test_get_dcmi_data(self, document_md_file, test_document_data):
-        parser = VanDocsDocumentXmlParser(document_md_file)
+        parser = DocumentXmlParser(document_md_file)
 
         assert test_document_data[0]["metadata"] == parser.get_dcmi_data()
 
     def test_get_md5_hash(self, document_md_file):
-        parser = VanDocsDocumentXmlParser(document_md_file)
+        parser = DocumentXmlParser(document_md_file)
 
         assert "4d118b7297d8469c2833046fa48471cf" == parser.get_md5_hash()

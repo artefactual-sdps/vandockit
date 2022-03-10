@@ -18,7 +18,7 @@
 import xml.etree.ElementTree as ET
 
 
-class VanDocsXmlParser:
+class BaseXmlParser:
     def __init__(self, xml_file):
         self.xml_file = xml_file
         self.xml_root = None
@@ -28,7 +28,7 @@ class VanDocsXmlParser:
             try:
                 xml_tree = ET.parse(self.xml_file)
                 self.xml_root = xml_tree.getroot()
-            except (ET.ParseError):
+            except ET.ParseError:
                 raise RuntimeError(
                     'Couldn\'t parse XML tree in "{}"'.format(self.xml_file)
                 )
@@ -57,7 +57,7 @@ class VanDocsXmlParser:
         return data
 
 
-class VanDocsContainerXmlParser(VanDocsXmlParser):
+class ContainerXmlParser(BaseXmlParser):
     ITEM_WRAPPER = "Container"
 
     # Map XML elements to DCMI terms {xml_element_name: dcmi_term_name}
@@ -72,7 +72,7 @@ class VanDocsContainerXmlParser(VanDocsXmlParser):
     }
 
 
-class VanDocsDocumentXmlParser(VanDocsXmlParser):
+class DocumentXmlParser(BaseXmlParser):
     ITEM_WRAPPER = "Document"
 
     # Map XML elements to DCMI terms {xml_element_name: dcmi_term_name}

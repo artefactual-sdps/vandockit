@@ -77,11 +77,23 @@ class TestBaseConverter:
             path for path in dest_dir.iterdir()
         ]
 
+    def test_copy_files_os_error(self, dest_dir, tmp_path):
+        dest_dir.chmod(0o555)  # make dest_dir unwritable
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        file = source_dir / "test_file.txt"
+        file.touch()
+
+        converter = vd_converters.BaseConverter(source_dir)
+
+        with pytest.raises(OSError):
+            converter.copy_files([file], dest_dir)
+
     def test_add_file(self, tmp_path, vd_base_converter):
         file = tmp_path / "DummyMetadata.xml"
         vd_base_converter.add_file(vd_base_converter.FT_SUBMISSION_DOC, file)
 
-        assert [file] == vd_base_converter.get_files_by_type(
+        assert set([file]) == vd_base_converter.get_files_by_type(
             vd_base_converter.FT_SUBMISSION_DOC
         )
 
@@ -93,13 +105,24 @@ class TestBaseConverter:
         vd_base_converter.add_file(vd_base_converter.FT_SUBMISSION_DOC, file)
 
         # Should only have one instance of file
-        assert [file] == vd_base_converter.get_files_by_type(
+        assert set([file]) == vd_base_converter.get_files_by_type(
             vd_base_converter.FT_SUBMISSION_DOC
         )
 
     def test_add_file_invalid_file_type(self, tmp_path, vd_base_converter):
         with pytest.raises(KeyError):
             vd_base_converter.add_file("spam", tmp_path / "DummyMetadata.xml")
+
+    def test_get_files_by_type(self, tmp_path, vd_base_converter):
+        test_file = tmp_path / "foo.txt"
+        vd_base_converter.add_file(vd_base_converter.FT_PRESERVATION_OBJECT, test_file)
+
+        assert set([test_file]) == vd_base_converter.get_files_by_type(
+            vd_base_converter.FT_PRESERVATION_OBJECT
+        )
+
+    def test_get_files_by_type_invalid_type(self, vd_base_converter):
+        assert None == vd_base_converter.get_files_by_type("spam")
 
     def test_create_subdirs(self, dest_dir, vd_base_converter):
         vd_base_converter.create_subdirs(dest_dir, "spam")
@@ -114,6 +137,20 @@ class TestBaseConverter:
 
         assert dir1.exists() and dir1.is_dir()
         assert dir2.exists() and dir2.is_dir()
+
+    def test_create_subdirs_existing_dir(self, dest_dir, vd_base_converter):
+        sub_dir = dest_dir / "spam"
+        sub_dir.mkdir()
+
+        test_dir = vd_base_converter.create_subdirs(dest_dir, "spam")
+
+        assert sub_dir == test_dir
+
+    def test_create_subdirs_os_error(self, dest_dir, vd_base_converter):
+        dest_dir.chmod(0o555)  # make dest_dir unwritable
+
+        with pytest.raises(OSError):
+            vd_base_converter.create_subdirs(dest_dir, "spam")
 
     def test_make_read_only(self, dest_dir, vd_base_converter):
         test_dir = dest_dir / "a_dir"
@@ -220,9 +257,10 @@ class TestContainerConverter:
         subdocs_dir = dest_dir / "metadata" / "submissionDocumentation"
         vd_container_converter.copy_submission_docs(dest_dir)
 
-        assert vd_package_converter.SUBMISSION_DOC_FILENAMES + [
-            test_container_data["md_filename"]
-        ] == [x.name for x in subdocs_dir.iterdir()]
+        assert set(
+            vd_package_converter.SUBMISSION_DOC_FILENAMES
+            + [test_container_data["md_filename"]]
+        ) == set([x.name for x in subdocs_dir.iterdir()])
 
     def test_get_preservation_objects(
         self, vd_container_converter, test_container_data
@@ -294,10 +332,10 @@ class TestContainerConverter:
             / test_container_data["documents"][0]["name"]
         )
 
-    def test_create_metadata_csv_file(self, dest_dir, vd_container_converter):
+    def test_get_metadata_csv_path(self, dest_dir, vd_container_converter):
         check_file = dest_dir / "metadata" / "metadata.csv"
 
-        assert check_file == vd_container_converter.create_metadata_csv_file(dest_dir)
+        assert check_file == vd_container_converter.get_metadata_csv_path(dest_dir)
 
     def test_write_am_metadata(
         self, dest_dir, vd_container_converter, test_csv_data_full

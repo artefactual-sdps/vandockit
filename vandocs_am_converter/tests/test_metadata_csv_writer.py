@@ -18,20 +18,20 @@
 import pytest
 
 # Local modules
-from vandocs_am_converter.metadata_csv_writer import AmMetadataCsvWriter
+from vandocs_am_converter.metadata_csv_writer import AMMetadataCsvWriter
 
 
 class TestAMMetadataCsvWriter:
     def test_convert_dcmi_to_csv_keys(self, test_csv_md_dict, test_document_data):
 
-        writer = AmMetadataCsvWriter("123456")
+        writer = AMMetadataCsvWriter("123456")
 
         assert test_csv_md_dict == writer.convert_dcmi_to_csv_keys(
             test_document_data[0]["metadata"]
         )
 
     def test_add_row_data(self, test_csv_md_dict):
-        writer = AmMetadataCsvWriter("123456")
+        writer = AMMetadataCsvWriter("123456")
         writer.add_row_data("01-2700-10_0000007/DOC_2021_040165.DOC", test_csv_md_dict)
 
         check_data = dict(test_csv_md_dict)
@@ -41,7 +41,7 @@ class TestAMMetadataCsvWriter:
         assert check_data == writer.rows.pop()
 
     def test_add_dcmi_row_data(self, test_document_data, test_csv_md_dict):
-        writer = AmMetadataCsvWriter("123456")
+        writer = AMMetadataCsvWriter("123456")
         writer.add_dcmi_row_data(
             "01-2700-10_0000007/DOC_2021_040165.DOC", test_document_data[0]["metadata"]
         )
@@ -59,7 +59,7 @@ class TestAMMetadataCsvWriter:
         test_csv_data_full,
     ):
         csv_file = tmp_path / "metadata.csv"
-        writer = AmMetadataCsvWriter("123456")
+        writer = AMMetadataCsvWriter("123456")
         writer.add_dcmi_row_data(
             "01-2500-10_0000007",
             test_container_data["metadata"],
