@@ -18,53 +18,25 @@
 import pytest
 
 # Local modules
-from vandocs_am_converter.vandocs_xml_parser import (
+from vandocs_am_converter.metadata_xml_parser import (
     VanDocsXmlParser,
     VanDocsContainerXmlParser,
     VanDocsDocumentXmlParser,
 )
 
-CONTAINER_MD_XML = """
-<ContainerMetadata>
-    <Container>
-        <Creator>Smith Family</Creator>
-        <DateCreated>2022-02-15T12:00:00-08:00</DateCreated>
-        <Department>Testing Department</Department>
-        <RecordNumber>01-2700-10/0000007</RecordNumber>
-        <RecordType>Series</RecordType>
-        <TitleFreeTextPart>So many photos!</TitleFreeTextPart>
-        <TitleStructuredPart>Family photos 2021</TitleStructuredPart>
-    </Container>
-</ContainerMetadata>
-"""
-
-DOCUMENT_MD_XML = """
-<ContainerDocumentMetadata>
-    <Document>
-        <Creator>Smith, Jane</Creator>
-        <DateCreated>2021-11-15T08:12:34-08:00</DateCreated>
-        <Home>01-2700-10/0000007</Home>
-        <InternetMediaType>jpeg</InternetMediaType>
-        <RecordNumber>DOC/2009/040165</RecordNumber>
-        <RecordType>Image</RecordType>
-        <Title>Baby Smith, one day old</Title>
-        <MD5>4d118b7297d8469c2833046fa48471cf</MD5>
-    </Document>
-</ContainerDocumentMetadata>"""
-
 
 @pytest.fixture
-def container_md_file(tmp_path):
+def container_md_file(tmp_path, test_container_md_xml):
     file = tmp_path / "ContainerMetadata.xml"
-    file.write_text(CONTAINER_MD_XML)
+    file.write_text(test_container_md_xml)
 
     return file
 
 
 @pytest.fixture
-def document_md_file(tmp_path):
+def document_md_file(tmp_path, test_document_md_xml):
     file = tmp_path / "DOC_2009_040165_Metadata.xml"
-    file.write_text(DOCUMENT_MD_XML)
+    file.write_text(test_document_md_xml[0])
 
     return file
 
@@ -102,18 +74,10 @@ class TestVanDocsContainerXmlParser:
 
             assert 'XML element "foo" not found' in str(excinfo.value)
 
-    def test_get_dcmi_data(self, container_md_file):
+    def test_get_dcmi_data(self, container_md_file, test_container_data):
         parser = VanDocsContainerXmlParser(container_md_file)
 
-        assert {
-            "creator": "Smith Family",
-            "date": "2022-02-15T12:00:00-08:00",
-            "description": "So many photos!",
-            "identifier": "01-2700-10/0000007",
-            "provenance": "Testing Department",
-            "title": "Family photos 2021",
-            "type": "Series",
-        } == parser.get_dcmi_data()
+        assert test_container_data["metadata"] == parser.get_dcmi_data()
 
 
 class TestVanDocsDocumentXmlParser:
@@ -122,18 +86,10 @@ class TestVanDocsDocumentXmlParser:
 
         assert "Smith, Jane" == parser.get_value("Creator")
 
-    def test_get_dcmi_data(self, document_md_file):
+    def test_get_dcmi_data(self, document_md_file, test_document_data):
         parser = VanDocsDocumentXmlParser(document_md_file)
 
-        assert {
-            "creator": "Smith, Jane",
-            "date": "2021-11-15T08:12:34-08:00",
-            "format": "jpeg",
-            "identifier": "DOC/2009/040165",
-            "source": "01-2700-10/0000007",
-            "title": "Baby Smith, one day old",
-            "type": "Image",
-        } == parser.get_dcmi_data()
+        assert test_document_data[0]["metadata"] == parser.get_dcmi_data()
 
     def test_get_md5_hash(self, document_md_file):
         parser = VanDocsDocumentXmlParser(document_md_file)

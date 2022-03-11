@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.vandocs_xml_parser import VanDocsDocumentXmlParser
+from vandocs_am_converter.metadata_xml_parser import VanDocsDocumentXmlParser
 
 # Use the built-in version of scandir for Python 3.5+ otherwise use the scandir
 # module version
@@ -33,12 +33,12 @@ except ImportError:
 class PackageValidatorFactory:
     def get_validator(type, path):
         if type.lower() == "vandocs":
-            return VanDocsValidator(type, path)
+            return PackageValidator(type, path)
 
         raise ValueError('No validator found for package type "{}"'.format(type))
 
 
-class PackageValidator:
+class BaseValidator:
     required_files = []
     timer = {"validation": {"start": None, "end": None}}
 
@@ -154,14 +154,8 @@ class PackageValidator:
         logging.log(level=log_level, msg=self.get_summary_msg())
 
 
-class VanDocsValidator(PackageValidator):
-    required_files = [
-        "manifest.txt",
-        "Location.xml",
-        "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
-        "VanDocsDispositionContainerMetadataSchema.xsd",
-        "VanDocsDispositionLocationMetadataSchema.xsd",
-    ]
+class PackageValidator(BaseValidator):
+    required_files = ["manifest.txt", "Location.xml", "TransferLog.txt"]
 
     def get_containers(self):
         containers = []
@@ -181,7 +175,7 @@ class VanDocsValidator(PackageValidator):
 
         # Validate containers
         for name in self.get_containers():
-            validator = VanDocsContainerValidator(self.type, self.path / name, self)
+            validator = ContainerValidator(self.type, self.path / name, self)
             validator.validate()
 
             # Add checked and failed stats from container validator
@@ -198,9 +192,7 @@ class VanDocsValidator(PackageValidator):
         logpath = self.path / "TransferLog.txt"
 
         if not logpath.exists():
-            self.failed += 1
-            logging.error(self.context_prefix() + "TransferLog.txt is missing")
-
+            # This is already flagged as an failure in has_required_files()
             return False
 
         if logpath.stat().st_size > 0:
@@ -234,7 +226,7 @@ class VanDocsValidator(PackageValidator):
         return passed
 
 
-class VanDocsContainerValidator(PackageValidator):
+class ContainerValidator(BaseValidator):
     required_files = ["ContainerMetadata.xml"]
 
     def context_prefix(self):

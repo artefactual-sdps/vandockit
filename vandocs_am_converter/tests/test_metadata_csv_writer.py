@@ -21,72 +21,57 @@ import pytest
 from vandocs_am_converter.metadata_csv_writer import AmMetadataCsvWriter
 
 
-@pytest.fixture
-def test_dcmi_data():
-    return {
-        "creator": "Smith, Jane",
-        "date": "2021-11-15T08:12:34-08:00",
-        "format": "jpeg",
-        "identifier": "DOC/2021/040165",
-        "source": "01-2700-10/0000007",
-        "title": "Baby Smith, one day old",
-        "type": "Image",
-    }
-
-
-@pytest.fixture
-def test_csv_data():
-    return {
-        "dc.creator": "Smith, Jane",
-        "dc.date": "2021-11-15T08:12:34-08:00",
-        "dc.format": "jpeg",
-        "dc.identifier": "DOC/2021/040165",
-        "dc.source": "01-2700-10/0000007",
-        "dc.title": "Baby Smith, one day old",
-        "dc.type": "Image",
-    }
-
-
-class TestAmMetadataCsvWriter:
-    def test_convert_dcmi_to_csv_keys(self, test_dcmi_data, test_csv_data):
+class TestAMMetadataCsvWriter:
+    def test_convert_dcmi_to_csv_keys(self, test_csv_md_dict, test_document_data):
 
         writer = AmMetadataCsvWriter("123456")
 
-        assert test_csv_data == writer.convert_dcmi_to_csv_keys(test_dcmi_data)
-
-    def test_add_row_data(self, test_csv_data):
-        writer = AmMetadataCsvWriter("123456")
-        writer.add_row_data("01-2700-10_0000007/DOC_2021_040165.DOC", test_csv_data)
-
-        check_data = dict(test_csv_data)
-        check_data["filename"] = "objects/01-2700-10_0000007/DOC_2021_040165.DOC"
-        check_data["vandocs_transfer_number"] = "123456"
-
-        assert check_data == writer.rows.pop()
-
-    def test_add_dcmi_row_data(self, test_dcmi_data, test_csv_data):
-        writer = AmMetadataCsvWriter("123456")
-        writer.add_dcmi_row_data(
-            "01-2700-10_0000007/DOC_2021_040165.DOC", test_dcmi_data
+        assert test_csv_md_dict == writer.convert_dcmi_to_csv_keys(
+            test_document_data[0]["metadata"]
         )
 
-        check_data = dict(test_csv_data)
+    def test_add_row_data(self, test_csv_md_dict):
+        writer = AmMetadataCsvWriter("123456")
+        writer.add_row_data("01-2700-10_0000007/DOC_2021_040165.DOC", test_csv_md_dict)
+
+        check_data = dict(test_csv_md_dict)
         check_data["filename"] = "objects/01-2700-10_0000007/DOC_2021_040165.DOC"
         check_data["vandocs_transfer_number"] = "123456"
 
         assert check_data == writer.rows.pop()
 
-    def test_write_csv_file(self, tmp_path, test_dcmi_data):
+    def test_add_dcmi_row_data(self, test_document_data, test_csv_md_dict):
+        writer = AmMetadataCsvWriter("123456")
+        writer.add_dcmi_row_data(
+            "01-2700-10_0000007/DOC_2021_040165.DOC", test_document_data[0]["metadata"]
+        )
+
+        check_data = dict(test_csv_md_dict)
+        check_data["filename"] = "objects/01-2700-10_0000007/DOC_2021_040165.DOC"
+        check_data["vandocs_transfer_number"] = "123456"
+
+        assert check_data == writer.rows.pop()
+
+    def test_write_csv_file(
+        self,
+        tmp_path,
+        test_container_data,
+        test_csv_data_full,
+    ):
         csv_file = tmp_path / "metadata.csv"
         writer = AmMetadataCsvWriter("123456")
         writer.add_dcmi_row_data(
-            "01-2700-10_0000007/DOC_2021_040165.DOC", test_dcmi_data
+            "01-2500-10_0000007",
+            test_container_data["metadata"],
+        )
+        writer.add_dcmi_row_data(
+            "01-2500-10_0000007/DOC_2009_040165.PDF",
+            test_container_data["documents"][0]["metadata"],
         )
         writer.write_csv_file(csv_file)
 
-        check_csv_contents = (
-            '"filename","dc.title","dc.creator","dc.subject","dc.description","dc.publisher","dc.contributor","dc.date","dc.type","dc.format","dc.identifier","dc.source","dc.language","dc.relation","dc.coverage","dc.rights","dc.provenance","vandocs_transfer_number"',
-            '"objects/01-2700-10_0000007/DOC_2021_040165.DOC","Baby Smith, one day old","Smith, Jane","","","","","2021-11-15T08:12:34-08:00","Image","jpeg","DOC/2021/040165","01-2700-10/0000007","","","","","","123456"',
-        )
+        csv_data_string = ""
+        for row in test_csv_data_full:
+            csv_data_string += '"' + '","'.join(row) + '"\n'
 
-        assert "\n".join(check_csv_contents) + "\n" == csv_file.read_text()
+        assert csv_data_string == csv_file.read_text()

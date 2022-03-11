@@ -24,8 +24,8 @@ from datetime import datetime
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.package_converter import VanDocsPackageConverter
-from vandocs_am_converter.package_validator import PackageValidatorFactory
+from vandocs_am_converter.converters import PackageConverter
+from vandocs_am_converter.validators import PackageValidatorFactory
 
 # Constants
 SRC_PACKAGE_TYPE = "VanDocs"
@@ -104,7 +104,7 @@ def validate(path):
 def convert(source_path, dest_path):
     """Convert each VanDocs container to an Archivematica standard transfer"""
 
-    converter = VanDocsPackageConverter(source_path)
+    converter = PackageConverter(source_path)
     converter.convert(dest_path)
 
     print_summary(converter.get_summary_msg(), converter.has_errors(), True)

@@ -21,14 +21,14 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.vandocs_xml_parser import (
+from vandocs_am_converter.metadata_xml_parser import (
     VanDocsContainerXmlParser,
     VanDocsDocumentXmlParser,
 )
 from vandocs_am_converter.metadata_csv_writer import AmMetadataCsvWriter
 
 
-class PackageConverter:
+class BaseConverter:
     # Package file types
     FT_PRESERVATION_OBJECT = 1
     FT_CHECKSUM = 2
@@ -117,13 +117,13 @@ class PackageConverter:
         target_dir.chmod(0o555)
 
 
-class VanDocsPackageConverter(PackageConverter):
+class PackageConverter(BaseConverter):
     SUBMISSION_DOC_FILENAMES = [
         "Location.xml",
     ]
 
     def __init__(self, path, parent=None):
-        PackageConverter.__init__(self, path, parent)
+        BaseConverter.__init__(self, path, parent)
 
         # VanDocs containers are sub-directories that group together a number of
         # related preservation objects and their metadata
@@ -166,7 +166,7 @@ class VanDocsPackageConverter(PackageConverter):
         self.timer["start"] = time.time()
 
         for container in self.get_containers():
-            converter = VanDocsContainerConverter(container, self)
+            converter = ContainerConverter(container, self)
             converter.write_am_std_transfer(self.create_subdirs(Path(), dest_path))
             self.errors += converter.errors
 
@@ -176,7 +176,7 @@ class VanDocsPackageConverter(PackageConverter):
         logging.log(level, self.get_summary_msg())
 
 
-class VanDocsContainerConverter(PackageConverter):
+class ContainerConverter(BaseConverter):
     SUBMISSION_DOC_FILENAMES = ["ContainerMetadata.xml"]
 
     def get_log_prefix(self):
