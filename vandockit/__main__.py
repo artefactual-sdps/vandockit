@@ -24,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Local modules
+import vandockit
 from vandockit.converters import PackageConverter
 from vandockit.validators import PackageValidatorFactory
 
@@ -31,7 +32,7 @@ from vandockit.validators import PackageValidatorFactory
 SRC_PACKAGE_TYPE = "VanDocs"
 
 
-def config_logging():
+def _config_logging(command):
     """Configure logging"""
 
     logdir = Path("logs/")
@@ -51,9 +52,7 @@ def config_logging():
     console_logger.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
     logger.addHandler(console_logger)
 
-    log_filename = "convert_package_{}.log".format(
-        datetime.now().strftime("%Y%m%d_%H%M%S")
-    )
+    log_filename = "{}_{}.log".format(command, datetime.now().strftime("%Y%m%d_%H%M%S"))
     log_path = logdir / log_filename
 
     file_logger = logging.FileHandler(log_path)
@@ -64,7 +63,7 @@ def config_logging():
     logger.addHandler(file_logger)
 
 
-def box_msg(msg):
+def _box_msg(msg):
     """Embed message in a 78 character width box"""
 
     return """
@@ -76,70 +75,91 @@ def box_msg(msg):
     )
 
 
-def print_summary(msg, has_errors, box=False):
+def _print_summary(msg, has_errors):
     """Print a formatted summary message"""
 
     color = "red" if has_errors else "green"
-    if box:
-        msg = box_msg(msg)
-
-    click.echo(click.style("\n" + click.wrap_text(msg), fg=color))
+    click.echo(click.style("\n" + click.wrap_text(_box_msg(msg)), fg=color))
 
 
-def validate(path):
-    """Validate the VanDocs package"""
-
-    validator = PackageValidatorFactory.get_validator(SRC_PACKAGE_TYPE, path)
-    validator.validate()
-
-    if validator.is_valid():
-        print_summary(validator.get_summary_msg(), False)
-    else:
-        print_summary(validator.get_summary_msg(), True, True)
-
-        # Exit with error code 1 if source package isn't valid
-        sys.exit("Validation failed with one or more errors")
-
-
-def convert(source_path, dest_path):
-    """Convert each VanDocs container to an Archivematica standard transfer"""
-
-    converter = PackageConverter(source_path)
-    converter.convert(dest_path)
-
-    print_summary(converter.get_summary_msg(), converter.has_errors(), True)
-
-    if converter.errors:
-        sys.exit("Conversion failed with one or more errors")
-
-
-@click.command()
-@click.argument(
-    "source_path", type=click.Path(exists=True, file_okay=False, readable=True)
-)
-@click.argument("dest_path", type=click.Path())
-def main(source_path, dest_path):
-    """
-    USAGE:
-    convert_package.py SOURCE_PATH TARGET_PATH
-
-    Validate the VanDocs package at SOURCE_PATH then, if validation succeeds,
-    creates one Archivematica standard transfer directory for each VanDocs
-    container as a sub-directory of TARGET_PATH.
-    """
-
-    config_logging()
-
-    # Log script invocation with arguments
-    logging.info(" ".join(["Executing:"] + sys.argv))
-
+def _validate(path):
     try:
-        validate(source_path)
-        convert(source_path, dest_path)
+        validator = PackageValidatorFactory.get_validator(SRC_PACKAGE_TYPE, path)
+        validator.validate()
     except Exception as exception:
         # Log and re-raise exceptions
         logging.critical(exception)
         raise exception
+
+    return (validator.get_summary_msg(), validator.has_errors())
+
+
+def _convert(source_path, dest_path):
+    try:
+        converter = PackageConverter(source_path)
+        converter.convert(dest_path)
+    except Exception as exception:
+        # Log and re-raise exceptions
+        logging.critical(exception)
+        raise exception
+
+    return (converter.get_summary_msg(), converter.has_errors())
+
+
+@click.group()
+@click.version_option(version=vandockit.__version__)
+def main():
+    """A Python toolkit for VanDocs transfer packages"""
+
+
+@main.command("validate")
+@click.argument("path", type=click.Path(exists=True))
+def validate(path):
+    """
+    Validate that the VanDocs transfer package at PATH matches the expected
+    structure and contents.
+    """
+
+    _config_logging("validate")
+
+    # Log script invocation with arguments
+    logging.info(" ".join(["Executing:"] + sys.argv))
+
+    (summary_msg, has_errors) = _validate(path)
+
+    _print_summary(summary_msg, has_errors)
+
+    # Exit with error code 1 if source package isn't valid
+    if has_errors:
+        sys.exit("Validation failed with one or more errors")
+
+
+@main.command("convert")
+@click.argument(
+    "source_path", type=click.Path(exists=True, file_okay=False, readable=True)
+)
+@click.argument("dest_path", type=click.Path())
+def convert(source_path, dest_path):
+    """
+    Convert the VanDocs transfer package at SOURCE_PATH to one Archivematica
+    standard transfer directory per container in DEST_PATH.  Validates the
+    VanDocs package before conversion; validation failure prevents conversion.
+    """
+
+    _config_logging("convert")
+
+    # Log script invocation with arguments
+    logging.info(" ".join(["Executing:"] + sys.argv))
+
+    (summary_msg, has_errors) = _validate(source_path)
+
+    if not has_errors:
+        (summary_msg, has_errors) = _convert(source_path, dest_path)
+
+    _print_summary(summary_msg, has_errors)
+
+    if has_errors:
+        sys.exit("Conversion failed with one or more errors")
 
 
 if __name__ == "__main__":

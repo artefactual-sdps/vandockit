@@ -1,6 +1,7 @@
+-r common.txt
+
 attrs==21.4.0
 black==21.12b0
-click==8.0.3
 coverage==6.3.1
 iniconfig==1.1.1
 mccabe==0.6.1

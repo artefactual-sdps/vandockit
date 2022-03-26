@@ -18,7 +18,6 @@
 import pytest
 
 # Local modules
-import vandockit.converters as vd_converters
 import vandockit.validators as vd_validators
 
 
