@@ -1,10 +1,8 @@
-# VanDocs-AM-packager
+# Vandockit
 
 Copyright 2022 Artefactual Systems Inc. <http://artefactual.com>
 
-Python command line scripts to validate a VanDocs transfer package and convert
-it to multiple Archivematica standard transfer packages (one per VanDocs
-container).
+A Python toolkit for VanDocs transfer packages.
 
 ## Validate package
 

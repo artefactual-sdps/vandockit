@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 
-# This file is part of VanDocs-AM-Packager.
+# This file is part of Vandockit.
 #
 # Copyright 2022 Artefactual Systems Inc. <http://artefactual.com>
 #
-# VanDocs-AM-Packager is free software: you can redistribute it and/or modify
+# Vandockit is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# VanDocs-AM-Packager is distributed in the hope that it will be useful,
+# Vandockit is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with VanDocs-AM-Packager.  If not, see <http://www.gnu.org/licenses/>.
+# along with Vandockit.  If not, see <http://www.gnu.org/licenses/>.
 
 import click
 import logging.config
@@ -24,8 +24,8 @@ from datetime import datetime
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.converters import PackageConverter
-from vandocs_am_converter.validators import PackageValidatorFactory
+from vandockit.converters import PackageConverter
+from vandockit.validators import PackageValidatorFactory
 
 # Constants
 SRC_PACKAGE_TYPE = "VanDocs"

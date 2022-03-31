@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Local modules
-from vandocs_am_converter.validators import PackageValidatorFactory
+from vandockit.validators import PackageValidatorFactory
 
 
 def config_logging():
