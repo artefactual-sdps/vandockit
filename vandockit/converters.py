@@ -392,7 +392,12 @@ class ContainerConverter(BaseConverter):
 
         self.copy_submission_docs(am_transfer_dir)
         self.write_am_checksum_file(am_transfer_dir)
-        self.write_am_metadata(am_transfer_dir)
+
+        # 2022-03-10: Disable the creation of metadata.csv, at CVA's request,
+        # because the current VanDocs data doesn't map accurately to Dublin Core
+        #
+        # self.write_am_metadata(am_transfer_dir)
+
         self.copy_preservation_objects(am_transfer_dir)
         self.copy_desc_md_files(am_transfer_dir)
         self.make_read_only(am_transfer_dir)
