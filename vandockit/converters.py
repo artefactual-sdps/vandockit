@@ -145,6 +145,9 @@ class BaseConverter:
 class PackageConverter(BaseConverter):
     SUBMISSION_DOC_FILENAMES = [
         "Location.xml",
+        "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
+        "VanDocsDispositionContainerMetadataSchema.xsd",
+        "VanDocsDispositionLocationMetadataSchema.xsd",
     ]
 
     def __init__(self, path, parent=None):

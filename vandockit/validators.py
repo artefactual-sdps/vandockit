@@ -154,7 +154,14 @@ class BaseValidator:
 
 
 class PackageValidator(BaseValidator):
-    required_files = ["manifest.txt", "Location.xml", "TransferLog.txt"]
+    required_files = [
+        "manifest.txt",
+        "Location.xml",
+        "TransferLog.txt",
+        "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
+        "VanDocsDispositionContainerMetadataSchema.xsd",
+        "VanDocsDispositionLocationMetadataSchema.xsd",
+    ]
 
     def get_containers(self):
         containers = []
