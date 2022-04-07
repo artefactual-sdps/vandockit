@@ -17,17 +17,11 @@
 
 import logging
 import time
+from os import scandir
 from pathlib import Path
 
 # Local modules
 from vandockit.metadata_xml_parser import DocumentXmlParser
-
-# Use the built-in version of scandir for Python 3.5+ otherwise use the scandir
-# module version
-try:
-    from os import scandir
-except ImportError:
-    from scandir import scandir
 
 
 class PackageValidatorFactory:
