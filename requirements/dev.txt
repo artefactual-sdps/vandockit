@@ -1,19 +1,10 @@
 -r common.txt
 
-attrs==25.4.0
-black==25.12.0
 coverage==7.13.0
 iniconfig==1.1.1
-mccabe==0.7.0
-mypy-extensions==0.4.3
 packaging==25.0
-pathspec==0.9.0
-platformdirs==4.5.1
 pluggy==1.6.0
-pycodestyle==2.14.0
-pyflakes==3.4.0
-pyparsing==3.0.7
+Pygments==2.19.2
 pytest==9.0.2
 pytest-cov==7.0.0
-toml==0.10.2
-tomli==2.3.0
+ruff==0.14.8
