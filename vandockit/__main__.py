@@ -17,11 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Vandockit.  If not, see <http://www.gnu.org/licenses/>.
 
-import click
 import logging.config
 import sys
 from datetime import datetime
 from pathlib import Path
+
+import click
 
 # Local modules
 import vandockit
@@ -49,10 +50,14 @@ def _config_logging(command):
 
     console_logger = logging.StreamHandler()
     console_logger.setLevel(logging.ERROR)
-    console_logger.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    console_logger.setFormatter(
+        logging.Formatter("[%(levelname)s] %(message)s")
+    )
     logger.addHandler(console_logger)
 
-    log_filename = "{}_{}.log".format(command, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    log_filename = "{}_{}.log".format(
+        command, datetime.now().strftime("%Y%m%d_%H%M%S")
+    )
     log_path = logdir / log_filename
 
     file_logger = logging.FileHandler(log_path)
@@ -66,13 +71,11 @@ def _config_logging(command):
 def _box_msg(msg):
     """Embed message in a 78 character width box"""
 
-    return """
+    return f"""
 ==============================================================================
-{}
+{msg}
 ==============================================================================
-""".format(
-        msg
-    )
+"""
 
 
 def _print_summary(msg, has_errors):
@@ -84,7 +87,9 @@ def _print_summary(msg, has_errors):
 
 def _validate(path):
     try:
-        validator = PackageValidatorFactory.get_validator(SRC_PACKAGE_TYPE, path)
+        validator = PackageValidatorFactory.get_validator(
+            SRC_PACKAGE_TYPE, path
+        )
         validator.validate()
     except Exception as exception:
         # Log and re-raise exceptions

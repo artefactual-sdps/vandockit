@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Vandockit.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
 import time
+
+import pytest
 
 # Local modules
 import vandockit.validators as vd_validators
@@ -63,8 +64,8 @@ def vd_container_validator(test_package, test_container_data):
 
 
 def mocktime(timestr):
-    """Mock to replace time.time() with a deterministic epoch time set by an ISO
-    "YYYY-MM-DD HH:MM:SS" string"""
+    """Mock to replace time.time() with a deterministic epoch time set by an
+    ISO "YYYY-MM-DD HH:MM:SS" string"""
 
     def f():
         return time.mktime(time.strptime(timestr, "%Y-%m-%d %H:%M:%S"))
@@ -78,12 +79,16 @@ class TestPackageValidatorFactory:
 
     def test_get_unknown_validator(self, test_package):
         with pytest.raises(ValueError):
-            vd_validators.PackageValidatorFactory.get_validator("spam", test_package)
+            vd_validators.PackageValidatorFactory.get_validator(
+                "spam", test_package
+            )
 
 
 class TestBaseValidator:
     def test_set_path_not_found(self, test_package):
-        validator = vd_validators.BaseValidator("vandocs", test_package / "nodir")
+        validator = vd_validators.BaseValidator(
+            "vandocs", test_package / "nodir"
+        )
 
         with pytest.raises(FileNotFoundError):
             validator.get_contents()
@@ -135,8 +140,8 @@ class TestBaseValidator:
     def test_get_contents(self, vd_base_validator, test_container_data):
         contents = vd_base_validator.get_contents()
 
-        # Diff sets so arbitrary file order doesn't break the test
-        assert not set(x.name for x in contents) ^ set(
+        # Compare sets so arbitrary file order doesn't cause false negatives
+        assert {x.name for x in contents} == set(
             [test_container_data["name"], "TransferLog.txt"]
             + vd_validators.PackageValidator.required_files
         )
@@ -171,15 +176,17 @@ class TestPackageValidator:
         assert not validator.has_empty_transfer_log()
 
     def test_get_containers(self, vd_package_validator, test_container_data):
-        assert not set(vd_package_validator.get_containers()) ^ set(
-            [test_container_data["name"]]
-        )
+        assert set(vd_package_validator.get_containers()) == {
+            test_container_data["name"]
+        }
 
     def test_has_a_container(self, vd_package_validator):
         assert vd_package_validator.has_a_container()
 
     def test_not_has_a_container(self, test_package_no_ctr):
-        validator = vd_validators.PackageValidator("vandocs", test_package_no_ctr)
+        validator = vd_validators.PackageValidator(
+            "vandocs", test_package_no_ctr
+        )
 
         assert not validator.has_a_container()
 
@@ -193,7 +200,9 @@ class TestPackageValidator:
         )
 
     def test_invalid_get_summary_msg(self, monkeypatch, test_package_no_ctr):
-        validator = vd_validators.PackageValidator("vandocs", test_package_no_ctr)
+        validator = vd_validators.PackageValidator(
+            "vandocs", test_package_no_ctr
+        )
         monkeypatch.setattr(time, "time", mocktime("2022-02-11 12:00:01"))
         validator.validate()
 
@@ -236,12 +245,12 @@ class TestContainerValidator:
         ) = vd_container_validator.split_object_and_metadata_filenames()
 
         # Use set diff to ignore list element order
-        assert not set(doc["name"] for doc in test_container_data["documents"]) ^ set(
-            object_files
-        )
-        assert not set(
+        assert {
+            doc["name"] for doc in test_container_data["documents"]
+        } == set(object_files)
+        assert {
             doc["md_filename"] for doc in test_container_data["documents"]
-        ) ^ set(metadata_files)
+        } == set(metadata_files)
 
     def test_has_objects(self, vd_container_validator):
         assert vd_container_validator.has_objects(["DOC_2009_040165.PDF"])
@@ -254,7 +263,9 @@ class TestContainerValidator:
             ["DOC_2009_040165.PDF"], ["DOC_2009_040165_Metadata.xml"]
         )
 
-    def test_not_has_one_metadata_file_per_object(self, vd_container_validator):
+    def test_not_has_one_metadata_file_per_object(
+        self, vd_container_validator
+    ):
         assert not vd_container_validator.has_one_metadata_file_per_object(
             ["DOC_2009_040165.PDF"], []
         )
@@ -264,7 +275,9 @@ class TestContainerValidator:
             ["DOC_2009_040165.PDF"], ["DOC_2009_040165_Metadata.xml"]
         )
 
-    def test_not_has_one_object_per_metadata_file(self, vd_container_validator):
+    def test_not_has_one_object_per_metadata_file(
+        self, vd_container_validator
+    ):
         assert not vd_container_validator.has_one_object_per_metadata_file(
             [], ["DOC_2009_040165_Metadata.xml"]
         )
@@ -274,10 +287,14 @@ class TestContainerValidator:
             ["DOC_2009_040165_Metadata.xml"]
         )
 
-    def test_not_has_checksum_metadata(self, test_package, test_container_data):
+    def test_not_has_checksum_metadata(
+        self, test_package, test_container_data
+    ):
         # Delete checksum data
         md_file = (
-            test_package / test_container_data["name"] / "DOC_2009_016092_Metadata.xml"
+            test_package
+            / test_container_data["name"]
+            / "DOC_2009_016092_Metadata.xml"
         )
         md_file.write_text("")
 
@@ -285,4 +302,6 @@ class TestContainerValidator:
             "vandocs", test_package / test_container_data["name"]
         )
 
-        assert not validator.has_checksum_metadata(["DOC_2009_016092_Metadata.xml"])
+        assert not validator.has_checksum_metadata(
+            ["DOC_2009_016092_Metadata.xml"]
+        )

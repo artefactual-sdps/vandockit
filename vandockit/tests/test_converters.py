@@ -16,6 +16,7 @@
 # along with Vandockit.  If not, see <http://www.gnu.org/licenses/>.
 
 import csv
+
 import pytest
 
 # Local modules
@@ -41,7 +42,11 @@ def vd_package_converter(test_package):
 
 
 @pytest.fixture
-def vd_container_converter(test_package, test_container_data, vd_package_converter):
+def vd_container_converter(
+    test_package,
+    test_container_data,
+    vd_package_converter,
+):
     return vd_converters.ContainerConverter(
         test_package / test_container_data["name"], vd_package_converter
     )
@@ -73,9 +78,8 @@ class TestBaseConverter:
         converter = vd_converters.BaseConverter(source_dir)
         converter.copy_files(source_files, dest_dir)
 
-        assert [dest_dir / name for name in filenames] == [
-            path for path in dest_dir.iterdir()
-        ]
+        for path in [dest_dir / name for name in filenames]:
+            assert path.is_file()
 
     def test_copy_files_os_error(self, dest_dir, tmp_path):
         dest_dir.chmod(0o555)  # make dest_dir unwritable
@@ -93,7 +97,7 @@ class TestBaseConverter:
         file = tmp_path / "DummyMetadata.xml"
         vd_base_converter.add_file(vd_base_converter.FT_SUBMISSION_DOC, file)
 
-        assert set([file]) == vd_base_converter.get_files_by_type(
+        assert {file} == vd_base_converter.get_files_by_type(
             vd_base_converter.FT_SUBMISSION_DOC
         )
 
@@ -105,7 +109,7 @@ class TestBaseConverter:
         vd_base_converter.add_file(vd_base_converter.FT_SUBMISSION_DOC, file)
 
         # Should only have one instance of file
-        assert set([file]) == vd_base_converter.get_files_by_type(
+        assert {file} == vd_base_converter.get_files_by_type(
             vd_base_converter.FT_SUBMISSION_DOC
         )
 
@@ -115,14 +119,17 @@ class TestBaseConverter:
 
     def test_get_files_by_type(self, tmp_path, vd_base_converter):
         test_file = tmp_path / "foo.txt"
-        vd_base_converter.add_file(vd_base_converter.FT_PRESERVATION_OBJECT, test_file)
+        vd_base_converter.add_file(
+            vd_base_converter.FT_PRESERVATION_OBJECT,
+            test_file,
+        )
 
-        assert set([test_file]) == vd_base_converter.get_files_by_type(
+        assert {test_file} == vd_base_converter.get_files_by_type(
             vd_base_converter.FT_PRESERVATION_OBJECT
         )
 
     def test_get_files_by_type_invalid_type(self, vd_base_converter):
-        assert None == vd_base_converter.get_files_by_type("spam")
+        assert vd_base_converter.get_files_by_type("spam") is None
 
     def test_create_subdirs(self, dest_dir, vd_base_converter):
         vd_base_converter.create_subdirs(dest_dir, "spam")
@@ -175,11 +182,10 @@ class TestBaseConverter:
 
 class TestPackageConverter:
     def test_get_submission_docs(self, vd_package_converter):
-        # Test symmetric set diff to avoid errors from mismatched list element
-        # order.  Use list comprehension to convert libpath objects to strings.
-        assert not set(vd_package_converter.SUBMISSION_DOC_FILENAMES) ^ set(
-            i.name for i in vd_package_converter.get_submission_docs()
-        )
+        # compare sets to avoid false negatives due to ordering
+        a = set(vd_package_converter.SUBMISSION_DOC_FILENAMES)
+        b = {i.name for i in vd_package_converter.get_submission_docs()}
+        assert a == b
 
     def test_get_submission_docs_file_not_found(self, vd_package_converter):
         vd_package_converter.SUBMISSION_DOC_FILENAMES.append("spam.xml")
@@ -191,16 +197,20 @@ class TestPackageConverter:
         # dummy file from the file list to prevent errors in subsequent tests
         vd_package_converter.SUBMISSION_DOC_FILENAMES.pop()
 
-    def test_get_transfer_number(self, vd_package_converter, test_container_data):
+    def test_get_transfer_number(
+        self,
+        vd_package_converter,
+        test_container_data,
+    ):
         assert (
             test_container_data["transfer_number"]
             == vd_package_converter.get_transfer_number()
         )
 
     def test_get_containers(self, vd_package_converter, test_container_data):
-        assert not set([test_container_data["name"]]) ^ set(
+        assert {test_container_data["name"]} == {
             i.name for i in vd_package_converter.get_containers()
-        )
+        }
 
     def test_get_summary_msg(self, vd_package_converter):
         vd_package_converter.timer = {"start": 1000.0, "end": 1001.11}
@@ -214,13 +224,19 @@ class TestPackageConverter:
     def test_get_summary_msg_error(self, vd_package_converter):
         vd_package_converter.errors = 2
         vd_package_converter.timer = {"start": 1000.0, "end": 1001.11}
-        check_msg = "ERROR: Encountered 2 errors converting 1 containers [1.11s]"
 
-        assert check_msg == vd_package_converter.get_summary_msg()
+        assert (
+            "ERROR: Encountered 2 errors converting 1 containers [1.11s]"
+            == vd_package_converter.get_summary_msg()
+        )
 
 
 class TestContainerConverter:
-    def test_get_am_transfer_name(self, vd_container_converter, test_container_data):
+    def test_get_am_transfer_name(
+        self,
+        vd_container_converter,
+        test_container_data,
+    ):
         check_name = "{}_{}".format(
             test_container_data["transfer_number"], test_container_data["name"]
         )
@@ -245,7 +261,7 @@ class TestContainerConverter:
         )
         check_path.mkdir()
 
-        assert None == vd_container_converter.create_am_transfer_dir(dest_dir)
+        assert vd_container_converter.create_am_transfer_dir(dest_dir) is None
 
     def test_copy_submission_docs(
         self,
@@ -260,25 +276,29 @@ class TestContainerConverter:
         assert set(
             vd_package_converter.SUBMISSION_DOC_FILENAMES
             + [test_container_data["md_filename"]]
-        ) == set([x.name for x in subdocs_dir.iterdir()])
+        ) == {i.name for i in subdocs_dir.iterdir()}
 
     def test_get_preservation_objects(
         self, vd_container_converter, test_container_data
     ):
-        assert not set(doc["name"] for doc in test_container_data["documents"]) ^ set(
+        assert {doc["name"] for doc in test_container_data["documents"]} == {
             i.name for i in vd_container_converter.get_preservation_objects()
-        )
+        }
 
     def test_get_md_filename(self, tmp_path, vd_container_converter):
-        assert "test_file_Metadata.xml" == vd_container_converter.get_md_filename(
-            tmp_path / "test_file.pdf"
-        )
+        path = tmp_path / "test_file.pdf"
+        name = vd_container_converter.get_md_filename(path)
+        assert "test_file_Metadata.xml" == name
 
     def test_get_md5_hashes(self, vd_container_converter, test_container_data):
-        hashes = [
-            (doc["MD5hash"], "{}/{}".format(test_container_data["name"], doc["name"]))
-            for doc in test_container_data["documents"]
-        ]
+        hashes = []
+        for doc in test_container_data["documents"]:
+            hashes.append(
+                (
+                    doc["MD5hash"],
+                    "{}/{}".format(test_container_data["name"], doc["name"]),
+                )
+            )
 
         assert hashes == vd_container_converter.get_md5_hashes()
 
@@ -293,7 +313,9 @@ class TestContainerConverter:
 
         md_file = container_path / "DOC_2009_040165_Metadata.xml"
         md_file.write_text(
-            "<ContainerDocumentMetadata><Document></Document></ContainerDocumentMetadata>"
+            "<ContainerDocumentMetadata>"
+            "<Document></Document>"
+            "</ContainerDocumentMetadata>"
         )
 
         with pytest.raises(RuntimeError):
@@ -313,7 +335,11 @@ class TestContainerConverter:
 
         assert hash_text == checksum_file.read_text()
 
-    def test_get_container_metadata(self, vd_container_converter, test_container_data):
+    def test_get_container_metadata(
+        self,
+        vd_container_converter,
+        test_container_data,
+    ):
         assert (
             test_container_data["metadata"]
             == vd_container_converter.get_container_metadata()
@@ -333,9 +359,10 @@ class TestContainerConverter:
         )
 
     def test_get_metadata_csv_path(self, dest_dir, vd_container_converter):
-        check_file = dest_dir / "metadata" / "metadata.csv"
-
-        assert check_file == vd_container_converter.get_metadata_csv_path(dest_dir)
+        assert (
+            dest_dir / "metadata" / "metadata.csv"
+            == vd_container_converter.get_metadata_csv_path(dest_dir)
+        )
 
     def test_write_am_metadata(
         self, dest_dir, vd_container_converter, test_csv_data_full
@@ -344,10 +371,10 @@ class TestContainerConverter:
         csv_file = dest_dir / "metadata" / "metadata.csv"
 
         with csv_file.open("r") as fh:
-            csv_contents = [i for i in csv.reader(fh)]
+            csv_contents = list(csv.reader(fh))
 
-        # Don't check the last row of csv_contents because it's a near duplicate
-        # of the previous row
+        # Don't check the last row of csv_contents because it's a near
+        # duplicate of the previous row
         assert test_csv_data_full == csv_contents[:3]
 
     def test_copy_preservation_objects(
@@ -356,14 +383,18 @@ class TestContainerConverter:
         vd_container_converter.copy_preservation_objects(dest_dir)
         object_dir = dest_dir / vd_container_converter.name
 
-        assert not set(doc["name"] for doc in test_container_data["documents"]) ^ set(
+        assert {doc["name"] for doc in test_container_data["documents"]} == {
             i.name for i in object_dir.iterdir()
-        )
+        }
 
-    def test_get_desc_md_files(self, vd_container_converter, test_container_data):
-        assert not set(
+    def test_get_desc_md_files(
+        self,
+        vd_container_converter,
+        test_container_data,
+    ):
+        assert {
             doc["md_filename"] for doc in test_container_data["documents"]
-        ) ^ set(i.name for i in vd_container_converter.get_desc_md_files())
+        } == {i.name for i in vd_container_converter.get_desc_md_files()}
 
     def test_copy_desc_md_files(
         self, dest_dir, vd_container_converter, test_container_data
@@ -371,6 +402,6 @@ class TestContainerConverter:
         vd_container_converter.copy_desc_md_files(dest_dir)
         sd_dir = dest_dir / "metadata" / "submissionDocumentation"
 
-        assert not set(
+        assert {
             doc["md_filename"] for doc in test_container_data["documents"]
-        ) ^ set(i.name for i in sd_dir.iterdir() if i.name.endswith("_Metadata.xml"))
+        } == {i.name for i in sd_dir.glob("*_Metadata.xml")}

@@ -74,7 +74,9 @@ class AMMetadataCsvWriter:
 
     def write_csv_file(self, path):
         with path.open("w") as fh:
-            writer = csv.DictWriter(fh, dialect="unix", fieldnames=self.COLUMNS)
+            writer = csv.DictWriter(
+                fh, dialect="unix", fieldnames=self.COLUMNS
+            )
             writer.writeheader()
 
             for row in self.rows:

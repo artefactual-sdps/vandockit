@@ -18,11 +18,9 @@
 import pytest
 
 # Local modules
-from vandockit.metadata_xml_parser import (
-    BaseXmlParser,
-    ContainerXmlParser,
-    DocumentXmlParser,
-)
+from vandockit.metadata_xml_parser import BaseXmlParser
+from vandockit.metadata_xml_parser import ContainerXmlParser
+from vandockit.metadata_xml_parser import DocumentXmlParser
 
 
 @pytest.fixture

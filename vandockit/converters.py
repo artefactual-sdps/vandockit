@@ -21,11 +21,9 @@ import time
 from pathlib import Path
 
 # Local modules
-from vandockit.metadata_xml_parser import (
-    ContainerXmlParser,
-    DocumentXmlParser,
-)
 from vandockit.metadata_csv_writer import AMMetadataCsvWriter
+from vandockit.metadata_xml_parser import ContainerXmlParser
+from vandockit.metadata_xml_parser import DocumentXmlParser
 
 
 class BaseConverter:
@@ -46,11 +44,11 @@ class BaseConverter:
         self.timer = {"start": None, "end": None}
 
         self.files = {
-            self.FT_PRESERVATION_OBJECT: set([]),
-            self.FT_CHECKSUM: set([]),
-            self.FT_DESC_METADATA: set([]),
-            self.FT_OTHER_METADATA: set([]),
-            self.FT_SUBMISSION_DOC: set([]),
+            self.FT_PRESERVATION_OBJECT: set(),
+            self.FT_CHECKSUM: set(),
+            self.FT_DESC_METADATA: set(),
+            self.FT_OTHER_METADATA: set(),
+            self.FT_SUBMISSION_DOC: set(),
         }
 
     @property
@@ -61,7 +59,7 @@ class BaseConverter:
         return self.errors > 0
 
     def get_log_prefix(self):
-        return "{} ".format(self.name)
+        return f"{self.name} "
 
     def copy_files(self, files, dest_path):
         for file in files:
@@ -70,7 +68,7 @@ class BaseConverter:
             except OSError as err:
                 logging.critical(
                     self.get_log_prefix()
-                    + "Couldn't copy '{}' to '{}'".format(file, dest_path)
+                    + f"Couldn't copy '{file}' to '{dest_path}'"
                 )
 
                 # Halt script
@@ -79,8 +77,8 @@ class BaseConverter:
     def add_file(self, file_type, file):
         try:
             self.files[file_type].add(file)
-        except KeyError:
-            raise KeyError('Invalid file_type "{}"'.format(file_type))
+        except KeyError as err:
+            raise KeyError(f'Invalid file_type "{file_type}"') from err
 
     def get_files_by_type(self, file_type):
         try:
@@ -116,9 +114,9 @@ class BaseConverter:
             except OSError as err:
                 msg = (
                     self.get_log_prefix()
-                    + "Couldn't create sub-directory '{}', please make sure you"
-                    + " have write permissions"
-                ).format(path)
+                    + f"Couldn't create sub-directory {path}', please make"
+                    " sure you have write permissions"
+                )
 
                 logging.critical(msg)
 
@@ -153,8 +151,8 @@ class PackageConverter(BaseConverter):
     def __init__(self, path, parent=None):
         BaseConverter.__init__(self, path, parent)
 
-        # VanDocs containers are sub-directories that group together a number of
-        # related preservation objects and their metadata
+        # VanDocs containers are sub-directories that group together a number
+        # of related preservation objects and their metadata
         self.containers = []
 
     def get_transfer_number(self):
@@ -182,7 +180,10 @@ class PackageConverter(BaseConverter):
                 (self.timer["end"] - self.timer["start"]),
             )
         else:
-            msg = "ERROR: Encountered {} errors converting {} containers [{:.3}s]"
+            msg = (
+                "ERROR: Encountered {} errors converting {} containers"
+                + " [{:.3}s]"
+            )
 
             return msg.format(
                 self.errors,
@@ -195,7 +196,9 @@ class PackageConverter(BaseConverter):
 
         for container in self.get_containers():
             converter = ContainerConverter(container, self)
-            converter.write_am_std_transfer(self.create_subdirs(Path(), dest_path))
+            converter.write_am_std_transfer(
+                self.create_subdirs(Path(), dest_path)
+            )
             self.errors += converter.errors
 
         self.timer["end"] = time.time()
@@ -208,10 +211,10 @@ class ContainerConverter(BaseConverter):
     SUBMISSION_DOC_FILENAMES = ["ContainerMetadata.xml"]
 
     def get_log_prefix(self):
-        return 'Container "{}" '.format(self.name)
+        return f'Container "{self.name}" '
 
     def get_am_transfer_name(self):
-        return "{}_{}".format(self.parent.get_transfer_number(), self.name)
+        return f"{self.parent.get_transfer_number()}_{self.name}"
 
     def create_am_transfer_dir(self, dest_path):
         """Create an Archivematica transfer directory using the name format
@@ -222,8 +225,9 @@ class ContainerConverter(BaseConverter):
 
         if am_transfer_dir.exists():
             msg = (
-                'Transfer "{}" already exists. Please move or delete the existing',
-                "transfer directory to create a new transfer.",
+                f'Transfer "{am_transfer_name}" already exists. Please move or'
+                + " delete the existing transfer directory to create a new"
+                + " transfer."
             )
 
             self.errors += 1
@@ -235,7 +239,7 @@ class ContainerConverter(BaseConverter):
 
         logging.info(
             self.get_log_prefix()
-            + 'Created Archivematica standard transfer "{}"'.format(am_transfer_name)
+            + f'Created Archivematica standard transfer "{am_transfer_name}"'
         )
 
         return am_transfer_dir
@@ -254,7 +258,7 @@ class ContainerConverter(BaseConverter):
 
         logging.info(
             self.get_log_prefix()
-            + 'Copying {} submission documents to "{}"'.format(len(docs), subdoc_dir)
+            + f'Copying {len(docs)} submission documents to "{subdoc_dir}"'
         )
 
         # Copy transfer & container submission docs to am_transfer_dir
@@ -294,13 +298,14 @@ class ContainerConverter(BaseConverter):
         return hashes
 
     def write_am_checksum_file(self, am_transfer_dir):
-        """Write an Archivematica checksum.md5 file to the metadata/ directory"""
+        """Write an Archivematica checksum.md5 file to the metadata/
+        directory"""
 
         md_dir = self.create_subdirs(am_transfer_dir, "metadata")
         checksum_file = md_dir / "checksum.md5"
 
         logging.info(
-            self.get_log_prefix() + 'Writing checksum file "{}"'.format(checksum_file)
+            f'{self.get_log_prefix()} Writing checksum file "{checksum_file}"'
         )
 
         with checksum_file.open("w") as fh:
@@ -327,20 +332,22 @@ class ContainerConverter(BaseConverter):
         return metadata_file
 
     def write_am_metadata(self, am_transfer_dir):
-        """Write descriptive metadata for preservation objects to metadata.csv file"""
+        """Write descriptive metadata for preservation objects to metadata.csv
+        file"""
 
         csv_writer = AMMetadataCsvWriter(self.parent.get_transfer_number())
         csv_writer.add_dcmi_row_data(self.name, self.get_container_metadata())
 
         for file in self.get_preservation_objects():
             csv_writer.add_dcmi_row_data(
-                "{}/{}".format(self.name, file.name), self.get_document_metadata(file)
+                f"{self.name}/{file.name}",
+                self.get_document_metadata(file),
             )
 
         csv_path = self.get_metadata_csv_path(am_transfer_dir)
 
         logging.info(
-            self.get_log_prefix() + 'Writing metadata CSV file "{}"'.format(csv_path)
+            self.get_log_prefix() + f'Writing metadata CSV file "{csv_path}"'
         )
 
         csv_writer.write_csv_file(csv_path)
@@ -351,26 +358,26 @@ class ContainerConverter(BaseConverter):
 
         logging.info(
             self.get_log_prefix()
-            + 'Copying {} preservation objects to "{}"'.format(
-                len(objects), container_dir
-            )
+            + f"Copying {len(objects)} preservation objects to"
+            f' "{container_dir}"'
         )
 
         self.copy_files(objects, container_dir)
 
     def get_desc_md_files(self):
-        """Get a list of descriptive metadata file names in the source container"""
+        """Get a list of descriptive metadata file names in the source
+        container"""
 
         if not self.get_files_by_type(self.FT_DESC_METADATA):
-            self.files[self.FT_DESC_METADATA] = [
-                i for i in self.path.iterdir() if i.name.endswith("_Metadata.xml")
-            ]
+            self.files[self.FT_DESC_METADATA] = list(
+                self.path.glob("*_Metadata.xml")
+            )
 
         return self.get_files_by_type(self.FT_DESC_METADATA)
 
     def copy_desc_md_files(self, am_transfer_dir):
-        """Copy the descriptive metadata files from source container to the target
-        am_transfer_dir"""
+        """Copy the descriptive metadata files from source container to the
+        target am_transfer_dir"""
 
         dmd_files = self.get_desc_md_files()
         subdoc_dir = self.create_subdirs(
@@ -379,9 +386,8 @@ class ContainerConverter(BaseConverter):
 
         logging.info(
             self.get_log_prefix()
-            + 'Copying {} document metadata files to "{}"'.format(
-                len(dmd_files), subdoc_dir
-            )
+            + f"Copying {len(dmd_files)} document metadata files to"
+            f' "{subdoc_dir}"'
         )
 
         self.copy_files(dmd_files, subdoc_dir)
@@ -396,8 +402,9 @@ class ContainerConverter(BaseConverter):
         self.copy_submission_docs(am_transfer_dir)
         self.write_am_checksum_file(am_transfer_dir)
 
-        # 2022-03-10: Disable the creation of metadata.csv, at CVA's request,
-        # because the current VanDocs data doesn't map accurately to Dublin Core
+        # 2022-03-10: At CVA's request disable the creation of metadata.csv
+        # because the current VanDocs data doesn't map accurately to Dublin
+        # Core
         #
         # self.write_am_metadata(am_transfer_dir)
 

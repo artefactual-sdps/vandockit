@@ -28,10 +28,10 @@ class BaseXmlParser:
             try:
                 xml_tree = ET.parse(self.xml_file)
                 self.xml_root = xml_tree.getroot()
-            except ET.ParseError:
+            except ET.ParseError as err:
                 raise RuntimeError(
-                    'Couldn\'t parse XML tree in "{}"'.format(self.xml_file)
-                )
+                    f'Couldn\'t parse XML tree in "{self.xml_file}"'
+                ) from err
 
         return self.xml_root
 
@@ -41,7 +41,7 @@ class BaseXmlParser:
 
         if 0 == len(nodes):
             raise RuntimeError(
-                'XML element "{}" not found in "{}"'.format(name, self.xml_file)
+                f'XML element "{name}" not found in "{self.xml_file}"'
             )
 
         return nodes[0].text
