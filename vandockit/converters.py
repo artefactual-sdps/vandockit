@@ -160,46 +160,44 @@ class PackageConverter(BaseConverter):
         return self.name.replace("VanDocs-", "")
 
     def get_containers(self):
-        containers = []
-
         for item in self.path.iterdir():
             if item.is_dir():
-                containers.append(item)
+                container = ContainerConverter(item, self)
+                self.containers.append(container)
 
-        return containers
+        return self.containers
+
+    def get_am_transfers(self):
+        return sorted(
+            [container.get_am_transfer_name() for container in self.containers]
+        )
 
     def get_summary_msg(self):
-        if not self.has_errors():
-            msg = (
-                "SUCCESS: Converted {} VanDocs containers to Archivematica"
-                + " standard transfers [{:.3}s]"
+        elapsed = self.timer["end"] - self.timer["start"]
+        if self.has_errors():
+            return (
+                f"ERROR: Encountered {self.errors} errors converting"
+                f" {len(self.containers)} containers [{elapsed:.3}s]"
             )
 
-            return msg.format(
-                len(self.get_containers()),
-                (self.timer["end"] - self.timer["start"]),
-            )
-        else:
-            msg = (
-                "ERROR: Encountered {} errors converting {} containers"
-                + " [{:.3}s]"
-            )
+        msg = (
+            f"Source transfer: {self.path}\n\n"
+            f"Number of SIPs created: {len(self.containers)}\n"
+            f"Elapsed time: {elapsed:.3}s\n\n"
+        )
+        msg += "\n".join(self.get_am_transfers())
 
-            return msg.format(
-                self.errors,
-                len(self.get_containers()),
-                (self.timer["end"] - self.timer["start"]),
-            )
+        return msg
 
     def convert(self, dest_path):
         self.timer["start"] = time.time()
+        dest_path = Path(dest_path)
 
         for container in self.get_containers():
-            converter = ContainerConverter(container, self)
-            converter.write_am_std_transfer(
-                self.create_subdirs(Path(), dest_path)
-            )
-            self.errors += converter.errors
+            container.write_am_std_transfer(dest_path)
+
+            if container.has_errors():
+                self.errors += container.errors
 
         self.timer["end"] = time.time()
 
@@ -411,3 +409,5 @@ class ContainerConverter(BaseConverter):
         self.copy_preservation_objects(am_transfer_dir)
         self.copy_desc_md_files(am_transfer_dir)
         self.make_read_only(am_transfer_dir)
+
+        return am_transfer_dir

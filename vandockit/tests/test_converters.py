@@ -78,8 +78,9 @@ class TestBaseConverter:
         converter = vd_converters.BaseConverter(source_dir)
         converter.copy_files(source_files, dest_dir)
 
-        for path in [dest_dir / name for name in filenames]:
-            assert path.is_file()
+        assert {dest_dir / name for name in filenames} == set(
+            dest_dir.iterdir()
+        )
 
     def test_copy_files_os_error(self, dest_dir, tmp_path):
         dest_dir.chmod(0o555)  # make dest_dir unwritable
@@ -207,21 +208,52 @@ class TestPackageConverter:
             == vd_package_converter.get_transfer_number()
         )
 
-    def test_get_containers(self, vd_package_converter, test_container_data):
-        assert {test_container_data["name"]} == {
+    def test_get_containers(self, vd_package_converter):
+        assert {"01-2500-10_0000007"} == {
             i.name for i in vd_package_converter.get_containers()
         }
 
+    def test_get_am_transfers(
+        self,
+        vd_package_converter,
+    ):
+        vd_package_converter.containers = [
+            vd_converters.ContainerConverter(
+                vd_package_converter.path / "test-001", vd_package_converter
+            ),
+            vd_converters.ContainerConverter(
+                vd_package_converter.path / "test-002", vd_package_converter
+            ),
+        ]
+        want = [
+            "123456_test-001",
+            "123456_test-002",
+        ]
+
+        assert want == vd_package_converter.get_am_transfers()
+
     def test_get_summary_msg(self, vd_package_converter):
+        vd_package_converter.containers = [
+            vd_converters.ContainerConverter(
+                vd_package_converter.path / "test-001", vd_package_converter
+            ),
+            vd_converters.ContainerConverter(
+                vd_package_converter.path / "test-002", vd_package_converter
+            ),
+        ]
         vd_package_converter.timer = {"start": 1000.0, "end": 1001.11}
         check_msg = (
-            "SUCCESS: Converted 1 VanDocs containers to Archivematica"
-            + " standard transfers [1.11s]"
+            f"Source transfer: {vd_package_converter.path}\n\n"
+            "Number of SIPs created: 2\n"
+            "Elapsed time: 1.11s\n\n"
+            "123456_test-001\n"
+            "123456_test-002"
         )
 
         assert check_msg == vd_package_converter.get_summary_msg()
 
     def test_get_summary_msg_error(self, vd_package_converter):
+        vd_package_converter.get_containers()
         vd_package_converter.errors = 2
         vd_package_converter.timer = {"start": 1000.0, "end": 1001.11}
 
@@ -229,6 +261,15 @@ class TestPackageConverter:
             "ERROR: Encountered 2 errors converting 1 containers [1.11s]"
             == vd_package_converter.get_summary_msg()
         )
+
+    def test_convert(self, vd_package_converter, dest_dir):
+        vd_package_converter.convert(str(dest_dir))
+
+        assert len(vd_package_converter.containers) == 1
+
+        for transfer in vd_package_converter.get_am_transfers():
+            transfer_path = dest_dir / transfer
+            assert transfer_path.exists() and transfer_path.is_dir()
 
 
 class TestContainerConverter:
