@@ -29,7 +29,7 @@ class PackageValidatorFactory:
         if type.lower() == "vandocs":
             return PackageValidator(type, path)
 
-        raise ValueError('No validator found for package type "{}"'.format(type))
+        raise ValueError(f'No validator found for package type "{type}"')
 
 
 class BaseValidator:
@@ -45,7 +45,7 @@ class BaseValidator:
         return self.path.name
 
     def context_prefix(self):
-        return 'Package "{}" '.format(self.get_name())
+        return f'Package "{self.get_name()}" '
 
     def is_valid(self):
         # Return None if no validation checks have been done
@@ -67,7 +67,9 @@ class BaseValidator:
             and self.timer[timer_name]["start"]
             and self.timer[timer_name]["end"]
         ):
-            elapsed = self.timer[timer_name]["end"] - self.timer[timer_name]["start"]
+            elapsed = (
+                self.timer[timer_name]["end"] - self.timer[timer_name]["start"]
+            )
 
             return elapsed * multi
 
@@ -99,29 +101,6 @@ class BaseValidator:
             logging.info(self.context_prefix() + "has all required files")
 
         return not failed
-
-    def get_summary_msg(self):
-        if self.is_valid():
-            msg = 'VALID: all {} checks for Package "{}" passed [{:.3}s]'
-
-            return msg.format(
-                self.checked,
-                self.path.name,
-                self.get_elapsed_time("validation", 1),
-            )
-        else:
-            msg = 'INVALID: {} of {} checks for Package "{}" failed [{:.3}s]'
-
-            return msg.format(
-                self.failed,
-                self.checked,
-                self.path.name,
-                self.get_elapsed_time("validation", 1),
-            )
-
-    def log_summary_msg(self):
-        log_level = logging.INFO if self.is_valid() else logging.ERROR
-        logging.log(level=log_level, msg=self.get_summary_msg())
 
     def get_summary_msg(self):
         if self.is_valid():
@@ -230,7 +209,7 @@ class ContainerValidator(BaseValidator):
     required_files = ["ContainerMetadata.xml"]
 
     def context_prefix(self):
-        return 'Container "{}" '.format(self.get_name())
+        return f'Container "{self.get_name()}" '
 
     def validate(self):
         self.has_required_files()
@@ -243,8 +222,12 @@ class ContainerValidator(BaseValidator):
         if not self.has_objects(object_filenames):
             return False
 
-        self.has_one_metadata_file_per_object(object_filenames, metadata_filenames)
-        self.has_one_object_per_metadata_file(object_filenames, metadata_filenames)
+        self.has_one_metadata_file_per_object(
+            object_filenames, metadata_filenames
+        )
+        self.has_one_object_per_metadata_file(
+            object_filenames, metadata_filenames
+        )
         self.has_checksum_metadata(metadata_filenames)
 
         return 0 == self.failed
@@ -275,12 +258,14 @@ class ContainerValidator(BaseValidator):
             return False
 
         logging.info(
-            self.context_prefix() + "has {} objects".format(len(object_filenames))
+            self.context_prefix() + f"has {len(object_filenames)} objects"
         )
 
         return True
 
-    def has_one_metadata_file_per_object(self, object_filenames, metadata_filenames):
+    def has_one_metadata_file_per_object(
+        self, object_filenames, metadata_filenames
+    ):
         self.checked += 1
         failed = False
 
@@ -306,7 +291,9 @@ class ContainerValidator(BaseValidator):
 
         return not failed
 
-    def has_one_object_per_metadata_file(self, object_filenames, metadata_filenames):
+    def has_one_object_per_metadata_file(
+        self, object_filenames, metadata_filenames
+    ):
         self.checked += 1
         failed = False
 
@@ -314,9 +301,9 @@ class ContainerValidator(BaseValidator):
             found = False
 
             for filename in object_filenames:
-                if self.get_metadata_basename(md_filename) == self.get_filename_stem(
-                    filename
-                ):
+                if self.get_metadata_basename(
+                    md_filename
+                ) == self.get_filename_stem(filename):
                     found = True
 
                     break
@@ -351,7 +338,8 @@ class ContainerValidator(BaseValidator):
                 hash = parser.get_md5_hash()
             except RuntimeError:
                 logging.error(
-                    self.context_prefix() + 'Couldn\'t read md5 hash from "%s"',
+                    self.context_prefix()
+                    + 'Couldn\'t read md5 hash from "%s"',
                     md_filename,
                 )
 
@@ -361,7 +349,8 @@ class ContainerValidator(BaseValidator):
 
         if not failed:
             logging.info(
-                self.context_prefix() + "every metadata file has an MD5 hash value",
+                self.context_prefix()
+                + "every metadata file has an MD5 hash value",
             )
 
         return not failed
