@@ -74,9 +74,7 @@ def test_container_md_xml(test_container_data):
             <TitleFreeTextPart>{description}</TitleFreeTextPart>
             <TitleStructuredPart>{title}</TitleStructuredPart>
         </Container>
-    </ContainerMetadata>""".format(
-        **test_container_data["metadata"]
-    )
+    </ContainerMetadata>""".format(**test_container_data["metadata"])
 
 
 @pytest.fixture(scope="package")
@@ -112,6 +110,42 @@ def test_document_md_xml(test_document_data):
         xml_string.format(**doc["metadata"], MD5hash=doc["MD5hash"])
         for doc in test_document_data
     ]
+
+
+@pytest.fixture(scope="package")
+def test_location_xml():
+    xml_string = (
+        "<LocationMetadataDataSet "
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
+        "xsi:noNamespaceSchemaLocation="
+        '"VanDocsDispositionLocationMetadataSchema.xsd">\n'
+        "    <Location>\n"
+        "        <LocationName>(INACTIVE) Access Vancouver Program"
+        "</LocationName>\n"
+        "        <LocationType>Organization</LocationType>\n"
+        "        <UniqueIdentifier>12345</UniqueIdentifier>\n"
+        "        <Membership/>\n"
+        "        <HomeOrganization>CITY OF VANCOUVER</HomeOrganization>\n"
+        "        <LogsInAs/>\n"
+        "        <CanLogIn>false</CanLogIn>\n"
+        "        <DateActiveFrom>2010-07-06T00:00:00-07:00"
+        "</DateActiveFrom>\n"
+        "        <DateActiveTo>2022-08-25T00:00:00-07:00</DateActiveTo>\n"
+        "        <DateLastUpdated>2022-08-26T09:24:00-07:00"
+        "</DateLastUpdated>\n"
+        "        <IDNumber/>\n"
+        "        <InternetEmailAddress/>\n"
+        "        <JobTitle/>\n"
+        "        <Notes>removed from City of Vancouver membership, "
+        "not in use ''Friday, August 26, 2022 at 9:23:58 AM "
+        "(GMT-07:00) Doe, Jane:'' was under IT, moved under COV - "
+        "org chart clean up ''Friday, April 28, 2017 at 9:11:06 AM "
+        "(GMT+07:00) Smith, Mark:''</Notes>\n"
+        "    </Location>\n"
+        "</LocationMetadataDataSet>"
+    )
+
+    return xml_string
 
 
 @pytest.fixture(scope="package")
@@ -188,10 +222,17 @@ def test_csv_data_full(test_container_data, test_document_data):
 # prevents filesystem cross-effects between tests
 @pytest.fixture
 def test_package(
-    tmp_path, test_container_data, test_container_md_xml, test_document_md_xml
+    tmp_path,
+    test_container_data,
+    test_location_xml,
+    test_container_md_xml,
+    test_document_md_xml,
 ):
     package = tmp_path / test_container_data["transfer_name"]
     package.mkdir()
+
+    location_xml = package / "Location.xml"
+    location_xml.write_text(test_location_xml)
 
     for name in vd_validators.PackageValidator.required_files:
         file = package / name
