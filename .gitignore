@@ -1,6 +1,8 @@
+/build/
 /venv/
 /logs/
 __pycache__/
+/*.egg-info/
 
 # Files
 .coverage

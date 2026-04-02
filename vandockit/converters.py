@@ -18,6 +18,7 @@
 import logging
 import shutil
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # Local modules
@@ -36,6 +37,13 @@ class BaseConverter:
 
     # Output transfer types
     TRANSFER_TYPE_AM_STD = 1
+
+    # Personally identifiable information tags that should be removed from
+    # Location.xml
+    PII_TAGS = (
+        "LogsInAs",
+        "IDNumber",
+    )
 
     def __init__(self, path, parent=None):
         self.errors = self.successes = 0
@@ -142,7 +150,6 @@ class BaseConverter:
 
 class PackageConverter(BaseConverter):
     SUBMISSION_DOC_FILENAMES = [
-        "Location.xml",
         "VanDocsDispositionContainerDocumentMetadataSchema.xsd",
         "VanDocsDispositionContainerMetadataSchema.xsd",
         "VanDocsDispositionLocationMetadataSchema.xsd",
@@ -262,12 +269,40 @@ class ContainerConverter(BaseConverter):
         # Copy transfer & container submission docs to am_transfer_dir
         self.copy_files(docs, subdoc_dir)
 
+    def write_location_file(self, am_transfer_dir):
+        """Remove personally identifiable information from Location.xml and
+        write the sanitized file to the submissionDocumentation directory."""
+
+        # Create metadata/submissionDocumentation dir
+        subdoc_dir = self.create_subdirs(
+            am_transfer_dir, "metadata/submissionDocumentation"
+        )
+
+        logging.info(
+            self.get_log_prefix()
+            + f'Writing Location.xml file to "{subdoc_dir}"'
+        )
+
+        tree = ET.parse(self.parent.path / "Location.xml")
+        root = tree.getroot()
+
+        # Remove personally identifiable data
+        for el in root.findall("Location"):
+            for tag in self.PII_TAGS:
+                for child in el.findall(tag):
+                    el.remove(child)
+
+        tree.write(
+            subdoc_dir / "Location.xml", encoding="utf-8", xml_declaration=True
+        )
+
     def get_preservation_objects(self):
         if not self.get_files_by_type(self.FT_PRESERVATION_OBJECT):
             for item in self.path.iterdir():
                 # Skip submission docs and metadata files
                 if (
                     item.name not in self.SUBMISSION_DOC_FILENAMES
+                    and item.name != "Location.xml"
                     and not item.name.endswith("_Metadata.xml")
                 ):
                     self.add_file(self.FT_PRESERVATION_OBJECT, item)
@@ -398,6 +433,7 @@ class ContainerConverter(BaseConverter):
             return
 
         self.copy_submission_docs(am_transfer_dir)
+        self.write_location_file(am_transfer_dir)
         self.write_am_checksum_file(am_transfer_dir)
 
         # 2022-03-10: At CVA's request disable the creation of metadata.csv

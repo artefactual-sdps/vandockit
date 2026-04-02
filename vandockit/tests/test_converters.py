@@ -16,6 +16,7 @@
 # along with Vandockit.  If not, see <http://www.gnu.org/licenses/>.
 
 import csv
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -318,6 +319,30 @@ class TestContainerConverter:
             vd_package_converter.SUBMISSION_DOC_FILENAMES
             + [test_container_data["md_filename"]]
         ) == {i.name for i in subdocs_dir.iterdir()}
+
+    def test_write_location_file(
+        self,
+        dest_dir,
+        vd_container_converter,
+        vd_package_converter,
+        test_container_data,
+    ):
+        vd_container_converter.write_location_file(dest_dir)
+
+        subdocs_dir = dest_dir / "metadata" / "submissionDocumentation"
+
+        # The modified Location.xml should be written to the
+        # submissionDocumentation directory
+        assert (subdocs_dir / "Location.xml").is_file()
+
+        root = ET.parse(subdocs_dir / "Location.xml").getroot()
+
+        # There should be one LocationName element
+        assert len(list(root.iter("LocationName"))) == 1
+
+        # LogsInAs and IDNumber elements should be removed from Location.xml
+        assert list(root.iter("LogsInAs")) == []
+        assert list(root.iter("IDNumber")) == []
 
     def test_get_preservation_objects(
         self, vd_container_converter, test_container_data
