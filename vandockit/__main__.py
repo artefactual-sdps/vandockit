@@ -33,7 +33,7 @@ from vandockit.validators import PackageValidatorFactory
 SRC_PACKAGE_TYPE = "VanDocs"
 
 
-def _config_logging(command):
+def _config_logging(command, path):
     """Configure logging"""
 
     logdir = Path("logs/")
@@ -55,8 +55,9 @@ def _config_logging(command):
     )
     logger.addHandler(console_logger)
 
-    log_filename = "{}_{}.log".format(
-        command, datetime.now().strftime("%Y%m%d_%H%M%S")
+    container_name = Path(path).stem.replace("VanDocs-", "")
+    log_filename = "{}_{}_{}.log".format(
+        container_name, command, datetime.now().strftime("%Y%m%d_%H%M%S")
     )
     log_path = logdir / log_filename
 
@@ -125,7 +126,7 @@ def validate(path):
     structure and contents.
     """
 
-    _config_logging("validate")
+    _config_logging("validate", path)
 
     # Log script invocation with arguments
     logging.info(" ".join(["Executing:"] + sys.argv))
@@ -151,7 +152,7 @@ def convert(source_path, dest_path):
     VanDocs package before conversion; validation failure prevents conversion.
     """
 
-    _config_logging("convert")
+    _config_logging("convert", source_path)
 
     # Log script invocation with arguments
     logging.info(" ".join(["Executing:"] + sys.argv))
