@@ -24,7 +24,7 @@ class BaseXmlParser:
         self.xml_root = None
 
     def get_xml_root(self):
-        if not self.xml_root:
+        if self.xml_root is None:
             try:
                 xml_tree = ET.parse(self.xml_file)
                 self.xml_root = xml_tree.getroot()
