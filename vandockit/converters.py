@@ -43,6 +43,8 @@ class BaseConverter:
     PII_TAGS = (
         "LogsInAs",
         "IDNumber",
+        "InternetEmailAddress",
+        "Notes",
     )
 
     def __init__(self, path, parent=None):
