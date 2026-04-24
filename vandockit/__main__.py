@@ -100,10 +100,10 @@ def _validate(path):
     return (validator.get_summary_msg(), validator.has_errors())
 
 
-def _convert(source_path, dest_path):
+def _convert(source_path, dest_path, **kwargs):
     try:
         converter = PackageConverter(source_path)
-        converter.convert(dest_path)
+        converter.convert(dest_path, **kwargs)
     except Exception as exception:
         # Log and re-raise exceptions
         logging.critical(exception)
@@ -145,7 +145,14 @@ def validate(path):
     "source_path", type=click.Path(exists=True, file_okay=False, readable=True)
 )
 @click.argument("dest_path", type=click.Path())
-def convert(source_path, dest_path):
+@click.option(
+    "--zip",
+    "-z",
+    "zip_transfers",
+    is_flag=True,
+    help="Zip each AM standard transfer directory after conversion",
+)
+def convert(source_path, dest_path, zip_transfers):
     """
     Convert the VanDocs transfer package at SOURCE_PATH to one Archivematica
     standard transfer directory per container in DEST_PATH.  Validates the
@@ -160,7 +167,9 @@ def convert(source_path, dest_path):
     (summary_msg, has_errors) = _validate(source_path)
 
     if not has_errors:
-        (summary_msg, has_errors) = _convert(source_path, dest_path)
+        (summary_msg, has_errors) = _convert(
+            source_path, dest_path, zip=zip_transfers
+        )
 
     _print_summary(summary_msg, has_errors)
 

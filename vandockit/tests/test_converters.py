@@ -17,6 +17,7 @@
 
 import csv
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import pytest
 
@@ -161,7 +162,7 @@ class TestBaseConverter:
         with pytest.raises(OSError):
             vd_base_converter.create_subdirs(dest_dir, "spam")
 
-    def test_make_read_only(self, dest_dir, vd_base_converter):
+    def test_make_read_only_dir(self, dest_dir, vd_base_converter):
         test_dir = dest_dir / "a_dir"
         test_dir.mkdir()
         test_subdir = test_dir / "a_subdir"
@@ -169,7 +170,6 @@ class TestBaseConverter:
         test_file = test_dir / "a_file.txt"
         test_file.touch()
 
-        # Remove write permissions for directory and files
         vd_base_converter.make_read_only(test_dir)
 
         # Can't add a new file
@@ -178,6 +178,15 @@ class TestBaseConverter:
             new_file.touch()
 
         # Can't write to an existing file
+        with pytest.raises(PermissionError):
+            test_file.write_text("foo")
+
+    def test_make_read_only_file(self, dest_dir, vd_base_converter):
+        test_file = dest_dir / "a_file.txt"
+        test_file.touch()
+
+        vd_base_converter.make_read_only(test_file)
+
         with pytest.raises(PermissionError):
             test_file.write_text("foo")
 
@@ -285,6 +294,18 @@ class TestContainerConverter:
 
         assert check_name == vd_container_converter.get_am_transfer_name()
 
+    def test_transfer_exists(
+        self, dest_dir, vd_container_converter, test_container_data
+    ):
+        assert vd_container_converter.transfer_exists(dest_dir) is False
+
+        check_path = dest_dir / "{}_{}".format(
+            test_container_data["transfer_number"], test_container_data["name"]
+        )
+        check_path.mkdir()
+
+        assert vd_container_converter.transfer_exists(dest_dir) is True
+
     def test_create_am_transfer_dir(
         self, dest_dir, vd_container_converter, test_container_data
     ):
@@ -294,16 +315,6 @@ class TestContainerConverter:
         )
 
         assert check_path.exists() and check_path.is_dir()
-
-    def test_create_am_transfer_dir_already_exists(
-        self, dest_dir, vd_container_converter, test_container_data
-    ):
-        check_path = dest_dir / "{}_{}".format(
-            test_container_data["transfer_number"], test_container_data["name"]
-        )
-        check_path.mkdir()
-
-        assert vd_container_converter.create_am_transfer_dir(dest_dir) is None
 
     def test_copy_submission_docs(
         self,
@@ -471,3 +482,16 @@ class TestContainerConverter:
         assert {
             doc["md_filename"] for doc in test_container_data["documents"]
         } == {i.name for i in sd_dir.glob("*_Metadata.xml")}
+
+    def test_zip_dir(
+        self,
+        dest_dir,
+        vd_container_converter,
+    ):
+        path = vd_container_converter.create_am_transfer_dir(dest_dir)
+        zip_path = vd_container_converter.zip_dir(path)
+
+        assert zip_path == Path(f"{path}.zip")
+        assert zip_path.is_file()
+        assert zip_path.stat().st_size > 0
+        assert not path.exists()
