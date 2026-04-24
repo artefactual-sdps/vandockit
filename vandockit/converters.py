@@ -135,19 +135,20 @@ class BaseConverter:
 
         return path
 
-    def make_read_only(self, target_dir):
-        """Recursively remove write access from directories and files in
-        directory dir to prevent modification"""
+    def make_read_only(self, path):
+        """
+        Remove write permissions from the file or directory at path to prevent
+        modification. If path is a directory, recursively remove write
+        permissions from all of its contents.
+        """
 
-        for item in target_dir.iterdir():
-            if item.is_dir():
-                # Recurse into sub-directories
+        if path.is_dir():
+            for item in path.iterdir():
                 self.make_read_only(item)
-            else:
-                item.chmod(0o444)
 
-        # Make target_dir itself read-only
-        target_dir.chmod(0o555)
+            path.chmod(0o555)
+        else:
+            path.chmod(0o444)
 
 
 class PackageConverter(BaseConverter):
@@ -198,12 +199,12 @@ class PackageConverter(BaseConverter):
 
         return msg
 
-    def convert(self, dest_path):
+    def convert(self, dest_path, **kwargs):
         self.timer["start"] = time.time()
         dest_path = Path(dest_path)
 
         for container in self.get_containers():
-            container.write_am_std_transfer(dest_path)
+            container.write_am_std_transfer(dest_path, **kwargs)
 
             if container.has_errors():
                 self.errors += container.errors
@@ -223,24 +224,25 @@ class ContainerConverter(BaseConverter):
     def get_am_transfer_name(self):
         return f"{self.parent.get_transfer_number()}_{self.name}"
 
+    def transfer_exists(self, dest_path):
+        """Check if a transfer directory or zip file with the same name already
+        exists in the destination path."""
+
+        transfer_name = self.get_am_transfer_name()
+
+        if (dest_path / transfer_name).exists() or (
+            dest_path / f"{transfer_name}.zip"
+        ).exists():
+            return True
+
+        return False
+
     def create_am_transfer_dir(self, dest_path):
         """Create an Archivematica transfer directory using the name format
         [transfer_number]_[container_name]"""
 
         am_transfer_name = self.get_am_transfer_name()
         am_transfer_dir = dest_path / am_transfer_name
-
-        if am_transfer_dir.exists():
-            msg = (
-                f'Transfer "{am_transfer_name}" already exists. Please move or'
-                + " delete the existing transfer directory to create a new"
-                + " transfer."
-            )
-
-            self.errors += 1
-            logging.error("\n".join(msg).format(am_transfer_name))
-
-            return
 
         self.create_subdirs(dest_path, am_transfer_name)
 
@@ -427,25 +429,73 @@ class ContainerConverter(BaseConverter):
 
         self.copy_files(dmd_files, subdoc_dir)
 
-    def write_am_std_transfer(self, dest_path):
-        am_transfer_dir = self.create_am_transfer_dir(dest_path)
+    def zip_dir(self, path):
+        """
+        Zip the directory at path and return the zip file's path. The original
+        directory is deleted after the zip file is created.
+        """
 
-        # Skip this container if the target am_transfer_dir already exists
-        if not am_transfer_dir:
+        try:
+            zip_path = shutil.make_archive(
+                path,
+                "zip",
+                path.parent,
+                path.name,
+            )
+        except OSError:
+            logging.critical(
+                self.get_log_prefix()
+                + f"Couldn't create zip file '{path.name}.zip' from dir"
+                f" '{path}'"
+            )
+
+            # Halt script
+            raise
+
+        # Delete the unzipped transfer directory after creating the zip file
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            logging.critical(
+                self.get_log_prefix() + f"Couldn't delete '{path}'"
+            )
+
+            # Halt script
+            raise
+
+        return Path(zip_path)
+
+    def write_am_std_transfer(self, dest_path, **kwargs):
+        # Skip this container if the transfer already exists
+        if self.transfer_exists(dest_path):
+            self.errors += 1
+            logging.error(
+                f'Transfer "{self.get_am_transfer_name()}" already exists.'
+                + " Please move or delete the existing transfer to create a"
+                + " new transfer."
+            )
+
             return
 
-        self.copy_submission_docs(am_transfer_dir)
-        self.write_location_file(am_transfer_dir)
-        self.write_am_checksum_file(am_transfer_dir)
+        transfer_path = self.create_am_transfer_dir(dest_path)
+
+        self.copy_submission_docs(transfer_path)
+        self.write_location_file(transfer_path)
+        self.write_am_checksum_file(transfer_path)
 
         # 2022-03-10: At CVA's request disable the creation of metadata.csv
         # because the current VanDocs data doesn't map accurately to Dublin
         # Core
         #
-        # self.write_am_metadata(am_transfer_dir)
+        # self.write_am_metadata(transfer_path)
 
-        self.copy_preservation_objects(am_transfer_dir)
-        self.copy_desc_md_files(am_transfer_dir)
-        self.make_read_only(am_transfer_dir)
+        self.copy_preservation_objects(transfer_path)
+        self.copy_desc_md_files(transfer_path)
 
-        return am_transfer_dir
+        # Zip the transfer directory if the --zip option was specified.
+        if kwargs.get("zip", False):
+            transfer_path = self.zip_dir(transfer_path)
+
+        self.make_read_only(transfer_path)
+
+        return transfer_path
